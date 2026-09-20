@@ -152,7 +152,10 @@
 
   async function tape() {
     /* the html already holds the last known-good read, so this only ever upgrades it. */
-    for (const url of ['/api/tape', '/data/tape.json']) {
+    /* Relative, not rooted. On Vercel the page sits at / so these resolve to
+       the same two paths as before, and on a plain static host that serves the
+       site from a subdirectory they still find their neighbours. */
+    for (const url of ['api/tape', 'data/tape.json']) {
       try {
         const res = await getJSON(url);
         const d = res && res.data;
@@ -291,7 +294,7 @@
     const wall = $('.gallery');
     if (!wall) return;
     let res;
-    try { res = await getJSON('/api/memes'); } catch (_) { return; }
+    try { res = await getJSON('api/memes'); } catch (_) { return; }
     const rows = (res && res.data) || [];
     const have = new Set($$('.gallery .tile').map((t) => t.dataset.slug));
     /* a slug becomes a file path, so anything that is not a plain slug is
@@ -334,7 +337,7 @@
     const grid = $('#postgrid');
     if (!grid) return;
     let res;
-    try { res = await getJSON('/api/posts'); } catch (_) { return; }
+    try { res = await getJSON('api/posts'); } catch (_) { return; }
     const rows = (res && res.data) || [];
     const have = new Set($$('a.post', grid).map((a) => a.getAttribute('href')));
 
