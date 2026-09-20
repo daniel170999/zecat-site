@@ -1,0 +1,12 @@
+# Repo nay deploy len Linux. Giu LF trong git bat ke may nao commit,
+# de khong co commit nao chi khac moi ky tu xuong dong.
+* text=auto eol=lf
+
+# nhi phan, dung dung vao
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.mp4 binary
+*.woff2 binary

@@ -1,0 +1,10 @@
+{
+  "name": "zecat-site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Official website for $ZECAT, a memecoin on Zcash traded through SHLD.fun",
+  "engines": {
+    "node": ">=20"
+  }
+}

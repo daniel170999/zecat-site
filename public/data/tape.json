@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "source": "snapshot",
+  "takenAt": "2026-09-20T20:16:17.267Z",
+  "data": {
+    "priceZecPerToken": 7.63344e-7,
+    "mcapZec": 763.344,
+    "liqZec": 92.46004958,
+    "vol24Zec": 7.52497401,
+    "change24Pct": -12.65,
+    "change7dPct": 45.25,
+    "positions": 2202,
+    "zecUsd": 1530.05,
+    "tipHeight": 3490333,
+    "graduated": true,
+    "rank": 1
+  }
+}

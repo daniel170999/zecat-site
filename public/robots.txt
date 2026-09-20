@@ -1,0 +1,6 @@
+# $ZECAT. everything on this site is public and meant to be read.
+# the api routes are machine endpoints, there is nothing there to index.
+User-agent: *
+Allow: /
+Disallow: /api/
+Sitemap: https://zecatzcash.vercel.app/sitemap.xml
