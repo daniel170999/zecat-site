@@ -5,19 +5,20 @@
    brand/CHARACTER.md muc 3. Khong them mau nao ngoai bang do.
 
    Bon mau xam la mau danh rieng. Trong the gioi nay xam nghia la CONG KHAI,
-   bi phoi ra, nhin thau duoc. No chi duoc xuat hien o dung mot cho tren trang:
-   phan "transparent" cua o thong ke nguon von. Do la nghia den cua no.
+   bi phoi ra, nhin thau duoc. No chi xuat hien o dung mot cho tren trang:
+   phan "transparent" cua o thong ke nguon von.
 
-   CHU. Ba ho, moi ho mot viec, khong chong nhau:
+   CHU. Ba ho, moi ho mot viec:
      Archivo         tieu de. Grotesque cong nghiep, dac, khoe.
-     IBM Plex Sans   than bai. Doc lien mach duoc.
-     IBM Plex Mono   moi con so. Chu so deu be ngang nen cot so khong nhay.
+     IBM Plex Sans   than bai.
+     IBM Plex Mono   moi con so, nhan, va ma.
      Silkscreen      DUY NHAT chu ZECAT o hero. No la logo, khong phai font
-                     giao dien. Ban cu dung no cho ca tieu de, nut va nhan —
-                     do la ly do trang truoc day nhin rat roi.
+                     giao dien.
 
-   HINH. Khong quang, khong nhoe, khong chuyen sac. Bong la khoi dac lech di,
-   ban kinh nhoe bang khong, y het luat cua tranh.
+   CHUYEN DONG. Bong luon la khoi dac lech di, ban kinh nhoe bang KHONG, y het
+   luat cua tranh. Khong quang, khong mo dan. Cai duoc phep dong la vi tri:
+   the nhac len, dong tien nghieng theo con tro, vach nhip chay. Tat ca deu
+   tat khi nguoi dung bat prefers-reduced-motion.
    =========================================================================== */
 
 :root{
@@ -44,17 +45,16 @@
   --white:#FFF6DE;
   --coral:#C4614A;
 
-  /* len va xuong tren bieu do */
   --up:#F0C558;
   --down:#C4761C;
 
-  /* xam: chi cho thu bi phoi ra cong khai. Xem ghi chu dau file. */
+  /* xam: chi cho thu bi phoi ra cong khai */
   --glass:#8E939C;
-  --glass-dim:#5A5F68;
 
   --maxw:1100px;
   --gutter:20px;
   --step:clamp(56px,7vw,96px);
+  --ease:cubic-bezier(.2,.7,.3,1);
 
   --display:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
   --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -66,7 +66,6 @@
 
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-@media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} }
 
 body{
   margin:0;
@@ -86,9 +85,9 @@ img,video{max-width:100%;display:block}
 /* Moi <img> mang width/height that de chan giat khi tai. Khong co dong nay
    thi chieu cao lay tu thuoc tinh HTML va anh bi keo meo. */
 img{height:auto}
-code{font-family:var(--mono);font-size:.92em}
+code{font-family:var(--mono);font-size:.9em;color:var(--gold);background:var(--panel-2);padding:1px 6px}
 
-h1,h2,h3{font-family:var(--display);font-weight:700;text-wrap:balance;margin:0;line-height:1.12;letter-spacing:-.015em}
+h1,h2,h3{font-family:var(--display);font-weight:700;text-wrap:balance;margin:0;line-height:1.14;letter-spacing:-.015em}
 
 .wrap{width:100%;max-width:var(--maxw);margin-inline:auto;padding-inline:var(--gutter)}
 
@@ -102,9 +101,8 @@ h1,h2,h3{font-family:var(--display);font-weight:700;text-wrap:balance;margin:0;l
   background:var(--gold);color:var(--ink);box-shadow:3px 3px 0 var(--wood);
 }
 
-/* nhan nho, dung cho eyebrow va ten truong */
 .eyebrow{
-  font-family:var(--mono);font-weight:500;font-size:12px;letter-spacing:.1em;
+  font-family:var(--mono);font-weight:500;font-size:12px;letter-spacing:.09em;
   color:var(--gold-3);margin:0 0 14px;display:flex;align-items:center;gap:9px;
 }
 .eyebrow::before{content:"";width:8px;height:8px;background:var(--gold);flex:none}
@@ -115,24 +113,26 @@ h1,h2,h3{font-family:var(--display);font-weight:700;text-wrap:balance;margin:0;l
 
 /* ------------------------------------------------------------------ nut */
 .btn{
-  font-family:var(--display);font-weight:700;font-size:14px;letter-spacing:.01em;
+  font-family:var(--display);font-weight:700;font-size:14px;
   display:inline-flex;align-items:center;justify-content:center;
   padding:11px 18px;border:2px solid var(--gold);background:var(--gold);color:var(--ink);
   cursor:pointer;white-space:nowrap;
+  transition:transform .12s var(--ease),box-shadow .12s var(--ease),background .12s var(--ease);
 }
 .btn:hover{background:var(--white);border-color:var(--white);color:var(--ink)}
-.btn:active{transform:translate(1px,1px)}
 .btn.buy{box-shadow:3px 3px 0 var(--wood)}
-.btn.buy:active{box-shadow:2px 2px 0 var(--wood)}
+.btn.buy:hover{transform:translate(-2px,-2px);box-shadow:5px 5px 0 var(--wood)}
+.btn.buy:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--wood)}
 .btn.ghost{background:transparent;color:var(--gold);box-shadow:none}
 .btn.ghost:hover{background:var(--gold);color:var(--ink);border-color:var(--gold)}
 .btn.lg{font-size:16px;padding:15px 26px}
 .btn.lg.buy{box-shadow:4px 4px 0 var(--wood)}
+.btn.lg.buy:hover{box-shadow:7px 7px 0 var(--wood)}
 .cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 
-@media (prefers-reduced-motion:reduce){ .btn:active{transform:none} }
-
 /* --------------------------------------------------------------- header */
+/* Ghim tren cung va o nguyen do. Day la cho duy nhat nut mua di theo nguoi
+   doc, nen no phai on dinh chu khong duoc tu an hien. */
 .topbar{
   position:sticky;top:env(safe-area-inset-top,0px);z-index:60;
   background:var(--ink-2);border-bottom:1px solid var(--line);
@@ -140,125 +140,163 @@ h1,h2,h3{font-family:var(--display);font-weight:700;text-wrap:balance;margin:0;l
 .bar{display:flex;align-items:center;gap:12px 24px;padding-block:12px}
 .mark{display:flex;align-items:center;gap:9px;font-family:var(--display);font-weight:800;font-size:16px;color:var(--gold);flex:none}
 .mark img{width:24px;height:24px}
-.nav{display:flex;gap:20px;flex-wrap:wrap;font-size:14px;font-weight:500}
-.nav a{color:var(--text);padding-block:2px;border-bottom:2px solid transparent}
+.nav{display:flex;gap:22px;flex-wrap:wrap;font-size:14px;font-weight:500}
+.nav a{color:var(--text);padding-block:2px;border-bottom:2px solid transparent;transition:color .12s var(--ease),border-color .12s var(--ease)}
 .nav a:hover{color:var(--gold);border-bottom-color:var(--gold)}
 .bar .btn{margin-left:auto;flex:none}
 
 /* Nhip 75 giay cua chain, chay that. */
 .pulse{height:2px;background:var(--line)}
 .pulse i{display:block;height:100%;width:100%;background:var(--gold);transform:scaleX(0);transform-origin:left center}
-@media (prefers-reduced-motion:reduce){ .pulse i{transform:scaleX(1) !important;background:var(--wood-2)} }
 
 /* ----------------------------------------------------------------- hero */
-.hero{padding-block:var(--step) calc(var(--step) * .7)}
-.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:center}
+.hero{padding-block:var(--step) calc(var(--step) * .72);border-top:none}
+.hero-grid{display:grid;grid-template-columns:1.12fr .88fr;gap:56px;align-items:center}
 
 .wordmark{
   font-family:var(--pixel);font-weight:400;
-  font-size:clamp(3.2rem,11vw,6.4rem);line-height:.9;color:var(--gold);
+  font-size:clamp(3.1rem,10.5vw,6rem);line-height:.92;color:var(--gold);
   margin:0 0 22px;letter-spacing:.02em;text-shadow:5px 5px 0 var(--wood);
 }
-.lede{font-size:clamp(1.05rem,2.2vw,1.28rem);line-height:1.5;color:var(--text-hi);margin:0 0 30px;max-width:40ch}
+.lede{font-size:clamp(1.05rem,2.2vw,1.3rem);line-height:1.5;color:var(--text-hi);margin:0 0 30px;max-width:38ch}
 
-.facts{margin:32px 0 0;display:flex;gap:28px 40px;flex-wrap:wrap}
-.facts div{display:flex;flex-direction:column;gap:2px}
+.facts{margin:34px 0 0;display:flex;gap:26px 44px;flex-wrap:wrap}
+.facts div{display:flex;flex-direction:column;gap:3px}
 .facts dt{font-family:var(--mono);font-size:11px;letter-spacing:.09em;color:var(--muted)}
 .facts dd{margin:0;font-family:var(--mono);font-weight:500;font-size:15px;color:var(--text-hi);font-variant-numeric:tabular-nums}
 
-.hero-art{margin:0}
-.hero-art img{width:100%;border:2px solid var(--gold-3);background:var(--panel);padding:12px;box-shadow:6px 6px 0 var(--wood)}
-.hero-art figcaption{margin-top:18px;text-align:center}
+/* Dong tien nghieng theo con tro. Bong dac di theo cung huong, nen khoi hinh
+   van phang dung luat tranh, chi co goc nhin la doi. */
+.hero-art{margin:0;perspective:900px}
+.coin-frame{
+  display:block;
+  transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));
+  transition:transform .18s var(--ease);
+  will-change:transform;
+}
+.coin-frame img{
+  width:100%;border:2px solid var(--gold-3);background:var(--panel);padding:12px;
+  box-shadow:var(--sx,6px) var(--sy,6px) 0 var(--wood);
+  transition:box-shadow .18s var(--ease);
+}
+.hero-art figcaption{margin-top:20px;text-align:center}
 .hero-art b{
   display:block;font-family:var(--mono);font-weight:600;font-size:30px;
   color:var(--gold);font-variant-numeric:tabular-nums;line-height:1.1;
 }
-.hero-art span{display:block;margin-top:6px;font-size:13px;line-height:1.5;color:var(--muted)}
+.hero-art figcaption span{display:block;margin-top:6px;font-size:13px;line-height:1.5;color:var(--muted)}
 
 /* ------------------------------------------------------------- sections */
-section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin-top:96px}
-.hero{border-top:none}
-.head{margin-bottom:36px;max-width:70ch}
-.head h2{font-size:clamp(1.5rem,3.6vw,2.2rem);color:var(--text-hi)}
-.head .sub{color:var(--muted);margin:14px 0 0;max-width:62ch;font-size:15px}
+section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin-top:92px}
+.head{margin-bottom:38px;max-width:68ch}
+.head h2{font-size:clamp(1.55rem,3.6vw,2.15rem);color:var(--text-hi)}
+.head .sub{color:var(--muted);margin:14px 0 0;max-width:60ch;font-size:15px}
 
 /* ---------------------------------------------------------------- chart */
 .chart-head{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
-.price .label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.09em;color:var(--muted);margin-bottom:6px}
+.price .label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.09em;color:var(--muted);margin-bottom:7px}
 .price b{
-  font-family:var(--mono);font-weight:600;font-size:clamp(1.8rem,4.6vw,2.6rem);
+  font-family:var(--mono);font-weight:600;font-size:clamp(1.7rem,4.2vw,2.4rem);
   color:var(--text-hi);font-variant-numeric:tabular-nums;line-height:1;display:block;
 }
-.price b i{font-style:normal;font-size:.45em;color:var(--muted);margin-left:4px;letter-spacing:.06em}
-.price .sub{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-top:8px;font-family:var(--mono);font-size:14px;color:var(--muted)}
+.price b i{font-style:normal;font-size:.42em;color:var(--muted);margin-left:5px;letter-spacing:.06em}
+.price .sub{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-top:9px;font-family:var(--mono);font-size:14px;color:var(--muted)}
 
 .chart-tools{display:flex;gap:10px;flex-wrap:wrap}
 .seg{display:flex;border:1px solid var(--line-2)}
 .seg button{
   font:inherit;font-family:var(--mono);font-size:12px;font-weight:500;
   background:transparent;border:none;border-right:1px solid var(--line-2);
-  color:var(--muted);padding:8px 13px;cursor:pointer;
+  color:var(--muted);padding:8px 14px;cursor:pointer;
+  transition:background .12s var(--ease),color .12s var(--ease);
 }
 .seg button:last-child{border-right:none}
 .seg button:hover{color:var(--gold)}
 .seg button[aria-pressed="true"]{background:var(--gold);color:var(--ink)}
 
 .chart-box{position:relative;border:1px solid var(--line-2);background:var(--panel);min-height:340px}
-#chart-canvas{height:380px;width:100%}
+#chart-canvas{height:400px;width:100%}
 .chart-msg{
   position:absolute;inset:0;margin:0;display:flex;align-items:center;justify-content:center;
   text-align:center;padding:24px;font-family:var(--mono);font-size:13px;color:var(--muted);
 }
 .chart-msg[hidden]{display:none}
 
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line-2);border:1px solid var(--line-2);border-top:none}
-.stat{background:var(--panel);padding:14px 16px}
-.stat span{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.07em;color:var(--muted)}
-.stat b{display:block;margin-top:6px;font-family:var(--mono);font-weight:600;font-size:17px;color:var(--text-hi);font-variant-numeric:tabular-nums}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(152px,1fr));gap:1px;background:var(--line-2);border:1px solid var(--line-2);border-top:none}
+.stat{background:var(--panel);padding:15px 17px;transition:background .12s var(--ease)}
+.stat:hover{background:var(--panel-2)}
+.stat span{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--muted)}
+.stat b{display:block;margin-top:7px;font-family:var(--mono);font-weight:600;font-size:17px;color:var(--text-hi);font-variant-numeric:tabular-nums}
+.stat b .muted{font-weight:400;font-size:13px}
 .stat.hi b{color:var(--gold)}
-/* Phan transparent cua o nguon von. Day la cho duy nhat tren trang duoc
-   dung mau xam, va no dung nghia den: tien do da bi phoi ra cong khai. */
-.stat .exposed{color:var(--glass)}
+/* Phan transparent cua o nguon von. Cho duy nhat tren trang dung mau xam,
+   va no dung nghia den: tien do da bi phoi ra cong khai. */
+.stat .exposed{color:var(--glass);font-weight:400;font-size:13px}
 
 .chart-foot{display:flex;gap:8px 14px;flex-wrap:wrap;align-items:center;margin-top:16px;font-family:var(--mono);font-size:12px;color:var(--muted)}
-.chip{font-family:var(--mono);font-weight:500;font-size:11px;letter-spacing:.06em;border:1px solid var(--line-2);padding:3px 9px;color:var(--gold-3)}
+.chip{font-family:var(--mono);font-weight:500;font-size:11px;letter-spacing:.05em;border:1px solid var(--line-2);padding:3px 9px;color:var(--gold-3)}
 .chip.live{color:var(--ink);background:var(--gold);border-color:var(--gold)}
 
 /* ---------------------------------------------------------------- about */
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;margin-bottom:40px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:22px;margin-bottom:46px}
 .card{border-top:2px solid var(--gold-3);padding-top:18px}
 .card h3{font-size:17px;color:var(--gold);margin-bottom:10px}
 .card p{margin:0;font-size:15px;color:var(--text)}
 
-.timeline{list-style:none;margin:0 0 20px;padding:0;border-left:2px solid var(--line-2)}
-.timeline li{position:relative;padding:0 0 22px 24px}
-.timeline li::before{content:"";position:absolute;left:-7px;top:7px;width:12px;height:12px;background:var(--ink);border:2px solid var(--gold-3)}
-.timeline li.key::before{background:var(--gold);border-color:var(--gold)}
-.timeline .when{font-family:var(--mono);font-weight:500;font-size:12px;color:var(--gold)}
-.timeline .blk{font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:10px}
-.timeline p{margin:5px 0 0;font-size:15px;color:var(--text-hi);max-width:64ch}
+/* Duong thoi gian. Mot vach doc lien tuc, moi moc co nut tren vach va mot
+   ke ngang tach no khoi moc ke tiep. Cot ngay nam rieng ben trai de mat
+   khong phai tim. */
+.tl{list-style:none;margin:0 0 22px;padding:0;border-top:1px solid var(--line-2)}
+.tl li{
+  position:relative;display:grid;grid-template-columns:132px 1fr;gap:0 40px;
+  padding:22px 0;border-bottom:1px solid var(--line-2);
+}
+/* vach doc, chay lien mach qua tat ca cac moc */
+.tl li::before{content:"";position:absolute;left:150px;top:0;bottom:0;width:1px;background:var(--line-2)}
+/* nut tren vach */
+.tl li::after{content:"";position:absolute;left:145px;top:27px;width:11px;height:11px;background:var(--ink);border:2px solid var(--gold-3)}
+.tl li.key::after{background:var(--gold);border-color:var(--gold)}
+
+.tl-when{text-align:right;display:flex;flex-direction:column;gap:2px}
+.tl-when b{font-family:var(--mono);font-weight:600;font-size:13px;color:var(--text-hi)}
+.tl-when span{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.tl-what h3{font-size:17px;color:var(--gold);margin-bottom:5px}
+.tl-what p{margin:0;font-size:15px;color:var(--text);max-width:58ch}
+.tl-blk{display:inline-block;margin-top:9px;font-family:var(--mono);font-size:11px;letter-spacing:.05em;color:var(--muted);border:1px solid var(--line-2);padding:3px 9px}
 
 .verify{margin:0;font-size:14px;color:var(--muted);max-width:64ch}
 
 /* ------------------------------------------------------------------ buy */
-.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:1px;background:var(--line-2);border:1px solid var(--line-2);margin-bottom:26px}
-.step{background:var(--panel);padding:24px}
-.step .n{font-family:var(--mono);font-weight:600;font-size:12px;letter-spacing:.1em;color:var(--gold-3)}
-.step h3{font-size:20px;color:var(--gold);margin:6px 0 14px}
-.step p{margin:0 0 12px;font-size:15px;color:var(--text)}
-.step p:last-child{margin-bottom:0}
-.step b{color:var(--text-hi);font-weight:600}
-.step code{color:var(--gold);background:var(--panel-2);padding:1px 5px}
-.step .note{font-size:13px;color:var(--muted);border-left:2px solid var(--line-2);padding-left:12px}
+/* Bon buoc, nen chi cho phep mot hoac hai cot. Voi minmax nho hon,
+   man hinh rong xep thanh ba cot va buoc thu tu ngoi mot minh o hang duoi.
+   min(430px,100%) chu khong phai 430px tran: minmax voi mot so tuyet doi lon
+   hon be ngang man hinh se ep ca cot rong ra va lam trang tran ngang tren
+   dien thoai. */
+.guide{list-style:none;margin:0 0 28px;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(430px,100%),1fr));gap:18px;align-items:start}
+.g{
+  border:1px solid var(--line-2);background:var(--panel);
+  transition:transform .14s var(--ease),box-shadow .14s var(--ease),border-color .14s var(--ease);
+}
+.g:hover{transform:translate(-3px,-3px);box-shadow:6px 6px 0 var(--wood);border-color:var(--gold-3)}
+.g-head{display:flex;align-items:center;gap:14px;padding:15px 22px;border-bottom:1px solid var(--line-2);background:var(--panel-2)}
+.g-n{font-family:var(--mono);font-weight:600;font-size:12px;color:var(--ink);background:var(--gold);padding:4px 9px;flex:none}
+.g-head h3{font-size:18px;color:var(--text-hi)}
+.g-body{padding:20px 22px}
+.g-body p{margin:0 0 13px;font-size:15px;color:var(--text)}
+.g-body p:last-child{margin-bottom:0}
+.g-body b{color:var(--text-hi);font-weight:600}
+/* Loi nhac, khong phai buoc. Tach ra bang mot vach doc chu khong bang mau. */
+.g-note{font-size:13.5px;color:var(--muted);border-left:2px solid var(--gold-3);padding-left:13px}
 
-.wallets{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-wrap:wrap;gap:8px 10px;font-family:var(--mono);font-size:13px}
-.wallets li{border:1px solid var(--line-2);padding:5px 10px;color:var(--muted)}
-.wallets li:first-child{flex:1 1 100%;border-color:var(--gold-3);color:var(--text)}
-.wallets em{font-style:normal;color:var(--muted);display:block;font-family:var(--body);font-size:12.5px;margin-top:3px;line-height:1.5}
+.chips{list-style:none;margin:0 0 13px;padding:0;display:flex;flex-wrap:wrap;gap:8px;font-family:var(--mono);font-size:13px}
+.chips li{border:1px solid var(--line-2);padding:6px 11px;color:var(--muted)}
+.chips .pick{flex:1 1 100%;border-color:var(--gold-3);color:var(--text)}
+.chips .pick a{font-weight:600}
+.chips em{font-style:normal;color:var(--muted);display:block;font-family:var(--body);font-size:12.5px;margin-top:4px;line-height:1.55}
 
 .idbox{border:1px solid var(--line-2);background:var(--panel);padding:22px;margin-bottom:22px}
-.idbox .label{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--muted)}
-.idbox code{display:block;margin:12px 0 18px;font-size:13px;color:var(--gold);word-break:break-all;line-height:1.7}
+.idbox .label{font-family:var(--mono);font-size:11px;letter-spacing:.07em;color:var(--muted)}
+.idbox code{display:block;margin:12px 0 18px;font-size:13px;background:none;padding:0;word-break:break-all;line-height:1.7}
 
 .warn{margin:0;border-left:3px solid var(--coral);padding:4px 0 4px 16px;font-size:15px;color:var(--text-hi);max-width:70ch}
 
@@ -267,28 +305,29 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 .filters button{
   font-family:var(--mono);font-size:12px;font-weight:500;background:transparent;
   border:1px solid var(--line-2);color:var(--muted);padding:7px 14px;cursor:pointer;
+  transition:background .12s var(--ease),color .12s var(--ease),border-color .12s var(--ease);
 }
 .filters button:hover{border-color:var(--gold-3);color:var(--gold)}
 .filters button[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--ink)}
 
-/* 81 = vua du de nam tren lop nen, tranh giu dung mau da ep. */
-.gallery{columns:3;column-gap:16px;position:relative;z-index:1}
+.gallery{columns:3;column-gap:16px}
 .tile{
   break-inside:avoid;margin:0 0 16px;position:relative;width:100%;
   border:1px solid var(--line-2);background:var(--panel);padding:0;cursor:pointer;
   font:inherit;color:inherit;text-align:left;
+  transition:transform .14s var(--ease),box-shadow .14s var(--ease),border-color .14s var(--ease);
 }
-.tile:hover{border-color:var(--gold)}
+.tile:hover{transform:translate(-3px,-3px);box-shadow:6px 6px 0 var(--wood);border-color:var(--gold)}
 .tile img{width:100%;height:auto;background:var(--panel-2)}
 .tile figcaption,.vidcard figcaption{
-  padding:10px 12px;font-size:13px;color:var(--text);
+  padding:11px 13px;font-size:13.5px;color:var(--text);
   display:flex;justify-content:space-between;gap:10px;align-items:baseline;
 }
 .tile figcaption i,.vidcard figcaption i{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--muted);flex:none}
 .vidcard{break-inside:avoid;margin:0 0 16px;border:1px solid var(--gold-3);background:var(--panel)}
 .vidcard video{width:100%;height:auto}
-/* mo ta bang chu cho clip. Nguoi khong nghe duoc van biet trong do co gi. */
-.vidnote{margin:0;padding:0 12px 12px;font-size:12.5px;color:var(--muted);line-height:1.6}
+/* Mo ta bang chu cho clip. Nguoi khong nghe duoc van biet trong do co gi. */
+.vidnote{margin:0;padding:0 13px 13px;font-size:12.5px;color:var(--muted);line-height:1.6}
 /* .tile va .vidcard deu tu dat display, nen de bep [hidden] cua trinh duyet.
    Thieu dong nay thi bo loc anh khong an duoc gi. */
 .tile[hidden],.vidcard[hidden]{display:none}
@@ -296,31 +335,32 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 
 /* ---------------------------------------------------------------- posts */
 .posts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start}
-.post{border:1px solid var(--line-2);background:var(--panel);padding:20px;display:flex;flex-direction:column}
+.post{
+  border:1px solid var(--line-2);background:var(--panel);padding:20px;display:flex;flex-direction:column;
+  transition:transform .14s var(--ease),box-shadow .14s var(--ease),border-color .14s var(--ease);
+}
 .post.pin{border-color:var(--gold-3)}
-.post:hover{border-color:var(--gold)}
+.post:hover{transform:translate(-3px,-3px);box-shadow:6px 6px 0 var(--wood);border-color:var(--gold)}
 .post .meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.05em}
 .post .pinflag{font-family:var(--display);font-weight:700;font-size:10px;letter-spacing:.06em;color:var(--ink);background:var(--gold);padding:2px 7px}
 .post .body{margin:14px 0 16px;font-size:15px;color:var(--text-hi);white-space:pre-line;flex:1}
 .post .go{font-family:var(--mono);font-size:12px;color:var(--gold-3)}
 .post:hover .go{color:var(--gold)}
-/* Khung X that duoc chen vao day. Khi script cua X khong tai duoc thi the
-   tinh o tren van dung nguyen, khong bao gio de lai o trong. */
+/* Khung X that duoc chen vao day. */
 .xcard{border:1px solid var(--line-2);background:var(--panel);overflow:hidden}
+.xcard iframe{max-width:100% !important}
 /* Chua co gi ben trong thi coi nhu khong ton tai. Nho dong nay, script cua X
    ve xong luc nao thi the hien ra luc do, khong can hen gio, va X khong tra
    loi thi cho nay tuyet doi khong de lai mot o vien rong. */
 .xcard:empty{display:none}
 /* Khung X ve xong thi the tu viet ngay ben duoi bien mat, cung mot khung
-   hinh. Lam bang CSS chu khong bang javascript vi widgets.js chen iframe
-   truoc khi promise cua no hoan tat, va trong khoang do nguoi doc se thay
-   ca hai ban. */
+   hinh. Lam bang CSS vi widgets.js chen iframe truoc khi promise hoan tat,
+   va trong khoang do nguoi doc se thay ca hai ban. */
 .xcard:not(:empty) + .post{display:none}
-.xcard iframe{max-width:100% !important}
 
 /* ---------------------------------------------------------------- rooms */
-.rooms{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;background:var(--line-2);border:1px solid var(--line-2)}
-.room{background:var(--panel);padding:16px 18px;display:block}
+.rooms{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:1px;background:var(--line-2);border:1px solid var(--line-2)}
+.room{background:var(--panel);padding:17px 18px;display:block;transition:background .12s var(--ease)}
 .room:hover{background:var(--panel-2)}
 .room b{display:block;font-family:var(--display);font-weight:700;font-size:15px;color:var(--gold)}
 .room span{display:block;margin-top:3px;font-family:var(--mono);font-size:12px;color:var(--muted)}
@@ -328,23 +368,9 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 /* --------------------------------------------------------------- footer */
 footer{border-top:1px solid var(--line);padding-block:var(--step) calc(var(--step) * .5)}
 .truths{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;margin-bottom:34px}
-.truths b{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--gold-3);margin-bottom:8px}
+.truths b{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.07em;color:var(--gold-3);margin-bottom:8px}
 .truths p{margin:0;font-size:13.5px;color:var(--muted);line-height:1.6}
 .sign{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-family:var(--mono);font-size:12px;color:var(--muted);margin:0}
-
-/* -------------------------------------------------------------- buy bar */
-/* Nut mua quan trong nhat trang, nen no di theo. Chi hien sau khi cuon qua
-   hero, de khong che mat man hinh dau tien. */
-.buybar{
-  position:fixed;left:0;right:0;bottom:0;z-index:70;
-  background:var(--ink-2);border-top:1px solid var(--gold-3);
-  padding-bottom:env(safe-area-inset-bottom,0px);
-}
-.buybar[hidden]{display:none}
-.buybar .wrap{display:flex;align-items:center;gap:14px;padding-block:10px}
-.bb-price{display:flex;align-items:baseline;gap:10px;font-family:var(--mono);min-width:0}
-.bb-price b{font-weight:600;font-size:16px;color:var(--text-hi);font-variant-numeric:tabular-nums;white-space:nowrap}
-.buybar .btn{margin-left:auto;flex:none}
 
 /* ------------------------------------------------------------- lightbox */
 .lb{position:fixed;inset:0;z-index:100;background:rgba(7,6,5,.97);display:flex;align-items:center;justify-content:center;padding:20px}
@@ -362,19 +388,36 @@ footer{border-top:1px solid var(--line);padding-block:var(--step) calc(var(--ste
   .hero-art{max-width:360px;margin-inline:auto}
   .gallery{columns:2}
   .nav{display:none}
+  .tl li{grid-template-columns:104px 1fr;gap:0 30px}
+  .tl li::before{left:118px}
+  .tl li::after{left:113px}
 }
 @media (max-width:560px){
   body{font-size:15px}
   .gallery{columns:1}
   .wordmark{text-shadow:4px 4px 0 var(--wood)}
   .bar{padding-block:10px}
-  .facts{gap:18px 28px}
-  #chart-canvas{height:300px}
+  .facts{gap:18px 30px}
+  #chart-canvas{height:320px}
   .chart-head{align-items:stretch}
   .chart-tools{width:100%}
   .seg{flex:1}
-  .seg button{flex:1;text-align:center}
-  section{scroll-margin-top:72px}
-  /* thanh mua noi o duoi che mat chan trang, tra lai cho cho no */
-  footer{padding-bottom:88px}
+  .seg button{flex:1;text-align:center;padding:9px 8px}
+  section{scroll-margin-top:70px}
+  /* Cot ngay xuong thanh mot dong rieng, vach doc bo di cho do chat. */
+  .tl li{grid-template-columns:1fr;gap:8px;padding:20px 0}
+  .tl li::before,.tl li::after{display:none}
+  .tl-when{text-align:left;flex-direction:row;gap:10px;align-items:baseline}
+  .g-body,.g-head{padding-inline:18px}
+}
+
+/* --------------------------------------------------------- reduced motion */
+/* Nguoi dung da noi ho khong muon chuyen dong. Bo het: khong nghieng, khong
+   nhac, khong chay. Vach nhip dung o trang thai day va doi mau cho diu. */
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{transition-duration:.01ms !important;animation-duration:.01ms !important}
+  .coin-frame{transform:none !important}
+  .tile:hover,.post:hover,.g:hover,.btn.buy:hover,.btn.buy:active{transform:none}
+  .pulse i{transform:scaleX(1) !important;background:var(--wood-2)}
 }

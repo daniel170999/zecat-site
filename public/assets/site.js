@@ -7,8 +7,9 @@
 
    What this file adds on top:
      - the live 75 second block pulse and the block counter
-     - the price header, the six stat tiles and the floating buy bar
+     - the price header and the six stat tiles
      - the candlestick chart, built from one pull of the whole chain history
+     - the cursor driven tilt on the hero coin
      - gallery filtering and the lightbox
      - real X embeds, with the static cards left in place when they fail
      - appending memes and posts that exist in D1 but are not baked in yet
@@ -57,18 +58,18 @@
   }
 
   /* Exactly the shape tools/sync-data.mjs bakes into the html:
-     "read 20 sep 2026, 22:49 utc". Built by hand rather than with
-     toUTCString, which returns "Sun, 20 Sep 2026 22:49:00 GMT" and breaks the
-     lowercase rule in VOICE.md on a line every visitor reads. */
-  const MON = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+     "Read 20 Sep 2026, 22:49 UTC". Built by hand rather than with
+     toUTCString, which returns "Sun, 20 Sep 2026 22:49:00 GMT", a format
+     nobody asked for and which does not match the baked line. */
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const pad = (n) => String(n).padStart(2, '0');
 
   function readStamp(iso) {
     const t = Date.parse(iso);
     if (!isFinite(t)) return '';
     const d = new Date(t);
-    return 'read ' + d.getUTCDate() + ' ' + MON[d.getUTCMonth()] + ' ' + d.getUTCFullYear() +
-      ', ' + pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ' utc';
+    return 'Read ' + d.getUTCDate() + ' ' + MON[d.getUTCMonth()] + ' ' + d.getUTCFullYear() +
+      ', ' + pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ' UTC';
   }
 
   /* ------------------------------------------------- the 75 second heartbeat */
@@ -106,22 +107,22 @@
 
   function paintMarket(d, meta) {
     const zec = Number(d.zecUsd);
-    const perLot = Number(d.priceZecPerToken) * LOT;
+    /* Per TOKEN, not per lot. The lot of 12,500 is a fill rule and belongs in
+       the buying guide; a price a reader compares against anything else has
+       to be the price of one token. */
+    const perToken = Number(d.priceZecPerToken);
     const chg = Number(d.change24Pct);
 
-    /* headline price */
-    if (ok(perLot) && perLot > 0) {
+    if (ok(perToken) && perToken > 0) {
       const main = $('#px-main');
-      if (main) main.innerHTML = nf(perLot, 5) + ' <i>zec</i>';
-      const bb = $('#bb-main');
-      if (bb) bb.textContent = nf(perLot, 5) + ' zec';
+      if (main) main.innerHTML = nf(perToken, 8) + ' <i>zec</i>';
       const u = $('#px-usd');
-      if (u) u.textContent = ok(zec) && zec > 0 ? usd(perLot * zec) : '';
+      if (u) u.textContent = ok(zec) && zec > 0 ? '$' + nf(perToken * zec, 6) : '';
     }
 
     if (ok(chg)) {
-      for (const el of [$('#px-chg'), $('#bb-chg')]) {
-        if (!el) continue;
+      const el = $('#px-chg');
+      if (el) {
         el.textContent = signed(chg);
         el.className = 'delta ' + (chg >= 0 ? 'up' : 'down');
       }
@@ -146,7 +147,7 @@
     const state = $('#tape-state'), stamp = $('#tape-stamp');
     if (!state || !stamp || !meta) return;
     const live = meta.source === 'live';
-    state.textContent = live ? 'live' : 'snapshot';
+    state.textContent = live ? 'Live' : 'Snapshot';
     state.classList.toggle('live', live);
     const when = readStamp(meta.takenAt);
     if (when) {
@@ -193,7 +194,8 @@
     for (const [h, p, bv, sv] of points) {
       const t = Math.floor((anchorMs + (h - anchorHeight) * blockSec * 1000) / 1000);
       const bucket = Math.floor(t / secondsPerBucket) * secondsPerBucket;
-      const price = p * rate;
+      /* points arrive as ZEC per lot, which is how the indexer quotes them */
+      const price = (p / LOT) * rate;
 
       if (!cur || cur.time !== bucket) {
         if (cur) { out.push(cur.c); vol.push(cur.v); }
@@ -222,8 +224,12 @@
     const { candles, volume } = toCandles(
       s.raw.points, TF[s.tf], anchorMs, s.raw.anchorHeight, blockSec, rate,
     );
+    /* A token costs a fraction of a cent, so the axis needs real decimals.
+        Too few and every candle collapses onto the same printed value. */
     s.candles.applyOptions({
-      priceFormat: { type: 'price', precision: s.unit === 'usd' ? 2 : 5, minMove: s.unit === 'usd' ? 0.01 : 0.00001 },
+      priceFormat: s.unit === 'usd'
+        ? { type: 'price', precision: 6, minMove: 0.000001 }
+        : { type: 'price', precision: 9, minMove: 0.000000001 },
     });
     s.candles.setData(candles);
     s.volume.setData(volume);
@@ -239,8 +245,8 @@
       if (msg) {
         msg.hidden = false;
         msg.textContent = !window.LightweightCharts
-          ? 'the chart library did not load. the numbers below still come straight off the chain.'
-          : 'no price history came back from the indexer. the coin page has the live chart.';
+          ? 'The chart library did not load. The numbers below still come straight off the chain.'
+          : 'No price history came back from the indexer. The coin page has the live chart.';
       }
       return;
     }
@@ -298,48 +304,71 @@
     wire('#unit', 'unit');
   }
 
+  /* Same move as every other number on this page: draw what is already on
+     disk, then quietly replace it with a fresh read.
+
+     It matters more here than elsewhere. /api/chart pulls two pages of block
+     history plus three other endpoints from shld.fun, which is six seconds or
+     worse on a cold cache, and a reader should not sit in front of an empty
+     rectangle for six seconds. data/chart.json is the same shape, baked by
+     tools/sync-data.mjs --tape, and it loads from our own origin in one hop. */
   async function chart() {
     const msg = $('#chart-msg');
-    for (const url of ['api/chart', 'data/chart.json']) {
-      try {
-        const raw = await getJSON(url);
-        if (raw && Array.isArray(raw.points) && raw.points.length > 1) {
-          buildChart(raw);
-          return;
-        }
-      } catch (_) { /* next */ }
-    }
-    if (msg) {
+    const usable = (raw) => raw && Array.isArray(raw.points) && raw.points.length > 1;
+
+    let drawn = false;
+    try {
+      const baked = await getJSON('data/chart.json');
+      if (usable(baked)) { buildChart(baked); drawn = true; }
+    } catch (_) { /* the live read below is the real answer anyway */ }
+
+    try {
+      const live = await getJSON('api/chart');
+      if (usable(live)) {
+        if (!drawn) { buildChart(live); drawn = true; }
+        else if (chartState) { chartState.raw = live; redraw(); }
+      }
+    } catch (_) { /* keep whatever is on screen */ }
+
+    if (!drawn && msg) {
       msg.hidden = false;
-      msg.textContent = 'the chain history is not reachable right now. the coin page on shld.fun has the live chart.';
+      msg.textContent = 'The chain history is not reachable right now. The coin page on shld.fun has the live chart.';
     }
   }
 
-  /* --------------------------------------------------------- the buy bar */
-  /* The most important control on the page, so it follows. It stays out of
-     the way until the reader has passed the hero, where the big button is. */
-  function buybar() {
-    const bar = $('#buybar');
-    const hero = $('.hero');
-    if (!bar || !hero) return;
+  /* ------------------------------------------------------- the coin tilt */
+  /* The one piece of depth on the page. The coin leans towards the cursor and
+     its shadow slides the other way, so the card reads as a solid object
+     sitting above the page rather than a picture printed on it.
 
-    /* Deliberately a scroll position and not an IntersectionObserver. An
-       observer never delivers its first callback while the page is not being
-       painted — a background tab, a minimised window — and the bar would then
-       sit hidden through a whole session. A scroll offset is always readable. */
-    let edge = 0;
-    const measure = () => { edge = hero.offsetTop + hero.offsetHeight - 80; };
+     The shadow stays hard edged with no blur, which is the same rule the
+     artwork follows, so this adds dimension without softening anything. */
+  function coinTilt() {
+    const art = $('#coin');
+    if (!art || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!matchMedia('(hover: hover) and (pointer: fine)').matches) return;
 
-    /* No requestAnimationFrame around this. rAF does not run while the page
-       is not being painted, and a reader who opens the tab in the background
-       and scrolls straight down would then never see the bar at all. The work
-       here is one number comparison, so throttling buys nothing anyway. */
-    const update = () => { bar.hidden = window.scrollY < edge; };
+    const MAX = 7;      // degrees
+    const BASE = 6;     // resting shadow offset, px
 
-    measure();
-    update();
-    addEventListener('scroll', update, { passive: true });
-    addEventListener('resize', () => { measure(); update(); }, { passive: true });
+    const move = (e) => {
+      const r = art.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      const x = (e.clientX - r.left) / r.width - 0.5;   // -0.5 .. 0.5
+      const y = (e.clientY - r.top) / r.height - 0.5;
+      art.style.setProperty('--ry', (x * MAX * 2).toFixed(2) + 'deg');
+      art.style.setProperty('--rx', (-y * MAX * 2).toFixed(2) + 'deg');
+      art.style.setProperty('--sx', (BASE - x * 10).toFixed(1) + 'px');
+      art.style.setProperty('--sy', (BASE - y * 10).toFixed(1) + 'px');
+    };
+
+    const rest = () => {
+      for (const p of ['--rx', '--ry', '--sx', '--sy']) art.style.removeProperty(p);
+    };
+
+    art.addEventListener('pointermove', move);
+    art.addEventListener('pointerleave', rest);
+    art.addEventListener('blur', rest, true);
   }
 
   /* -------------------------------------------------------- the gallery */
@@ -367,6 +396,7 @@
       const n = visible.length;
       foot.textContent = n + (n === 1 ? ' image' : ' images') +
         (tag === 'all' ? ' on the wall' : ' tagged ' + tag);
+      /* starts with a digit, so there is no first letter to capitalise */
     }
   }
 
@@ -577,15 +607,15 @@
 
       const when = p.posted_at
         ? new Date(p.posted_at).toLocaleDateString('en-us',
-            { day: 'numeric', month: 'short', year: 'numeric' }).toLowerCase()
+            { day: 'numeric', month: 'short', year: 'numeric' })
         : '';
 
       const meta = el('span', 'meta');
-      if (p.pinned) meta.append(el('span', 'pinflag', 'pinned'));
+      if (p.pinned) meta.append(el('span', 'pinflag', 'Pinned'));
       if (when) meta.append(el('span', null, when));
       if (p.views) meta.append(el('span', null, p.views + ' views'));
 
-      a.append(meta, el('span', 'body', p.body || ''), el('span', 'go', 'read on x'));
+      a.append(meta, el('span', 'body', p.body || ''), el('span', 'go', 'Read on X'));
       grid.appendChild(a);
     }
   }
@@ -602,9 +632,9 @@
         const text = btn.dataset.copy === 'asset' ? ASSET_ID : btn.dataset.copy;
         try {
           await navigator.clipboard.writeText(text);
-          btn.textContent = 'copied';
+          btn.textContent = 'Copied';
         } catch (_) {
-          btn.textContent = 'select it by hand';
+          btn.textContent = 'Select it by hand';
         }
         clearTimeout(timer);
         timer = setTimeout(() => { btn.textContent = label; }, 1800);
@@ -626,7 +656,7 @@
   gallery();
   lightbox();
   copy();
-  buybar();
+  coinTilt();
   market();
   chart();
   xEmbeds();

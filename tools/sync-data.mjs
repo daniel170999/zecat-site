@@ -239,15 +239,16 @@ if (process.argv.includes('--tape')) {
   };
 
   const z = d.zecUsd;
-  const perLot = d.priceZecPerToken * 12500;
+  /* Per TOKEN. The lot of 12,500 is a fill rule, not a price. */
+  const perToken = d.priceZecPerToken;
   const money = (v, k) => nf(v, k) + ' zec <span class="muted">' + usd(v * z) + '</span>';
 
   const at = new Date(live.takenAt);
-  const MON = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const pad = (n) => String(n).padStart(2, '0');
   const stamp =
-    'read ' + at.getUTCDate() + ' ' + MON[at.getUTCMonth()] + ' ' + at.getUTCFullYear() +
-    ', ' + pad(at.getUTCHours()) + ':' + pad(at.getUTCMinutes()) + ' utc';
+    'Read ' + at.getUTCDate() + ' ' + MON[at.getUTCMonth()] + ' ' + at.getUTCFullYear() +
+    ', ' + pad(at.getUTCHours()) + ':' + pad(at.getUTCMinutes()) + ' UTC';
 
   /* ---- 1. hai ban du phong tinh ---- */
   await writeFile(
@@ -280,8 +281,8 @@ if (process.argv.includes('--tape')) {
     patched++;
   };
 
-  put(/(<b id="px-main">)[\s\S]*?(<\/b>)/, nf(perLot, 5) + ' <i>zec</i>', 'gia o dau');
-  put(/(<span id="px-usd">)[^<]*(<\/span>)/, usd(perLot * z), 'gia usd');
+  put(/(<b id="px-main">)[\s\S]*?(<\/b>)/, nf(perToken, 8) + ' <i>zec</i>', 'gia o dau');
+  put(/(<span id="px-usd">)[^<]*(<\/span>)/, '$' + nf(perToken * z, 6), 'gia usd');
 
   /* dau va lop len/xuong phai khop voi cai site.js se ve lai */
   const chg = d.change24Pct;
@@ -347,7 +348,7 @@ if (process.argv.includes('--tape')) {
 
   console.log('sync-data --tape: ' + patched + ' cho trong index.html');
   console.log('  chart.json: ' + chartPoints + ' diem gia, tu block ' + chartBody.anchorHeight);
-  console.log('  ' + stamp + ' | ' + nf(perLot, 5) + ' zec mot lo | block ' + d.tipHeight);
+  console.log('  ' + stamp + ' | ' + nf(perToken, 8) + ' zec mot token | block ' + d.tipHeight);
 }
 
 /* ==========================================================================
