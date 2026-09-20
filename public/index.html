@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>$ZECAT, the first token ever launched on shld.fun</title>
-<meta name="description" content="$ZECAT, the first token ever launched on shld.fun. a meme token on Zcash, settled on layer 1. the story, the history, the memes.">
+<meta name="description" content="$ZECAT, the first token ever launched on shld.fun. a shielded memecoin on Zcash from the Zecscriptions team. live chart, how to buy, and the block heights anyone can check.">
 
 <!-- social preview. every absolute url below is written by
      tools/sync-data.mjs --origin. do not edit them by hand, run the command
@@ -31,41 +31,29 @@
 <link rel="apple-touch-icon" href="brand/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Silkscreen&display=swap">
 <link rel="stylesheet" href="assets/site.css">
-<!-- anh lon nhat trong khung hinh dau. khong co dong nay thi trinh duyet chi
-     thay no sau khi stylesheet cua Google tra ve. -->
+<!-- anh lon nhat trong khung hinh dau -->
 <link rel="preload" as="image" href="brand/ZECAT-original-logo.jpg" fetchpriority="high">
 </head>
 <body>
 
 <a class="sr" href="#main">skip to content</a>
 
-<div class="scan" aria-hidden="true"></div>
-
 <header class="topbar">
-  <div class="wrap">
-    <div class="strip">
-      <span class="tick">$ZECAT</span>
-      <span class="sep" aria-hidden="true">/</span>
-      <span>asset dbc23d99&hellip;c48bc32a</span>
-      <button class="copybtn" type="button" data-copy="asset">copy id</button>
-      <span class="right">
-        <a href="https://x.com/ZecatZcash" rel="noopener" target="_blank">@ZecatZcash</a>
-        <span class="sep" aria-hidden="true">/</span>
-        <a href="https://t.me/zcashalpha" rel="noopener" target="_blank">t.me/zcashalpha</a>
-      </span>
-    </div>
-    <nav class="navrow" aria-label="sections">
-      <a href="#tape">tape</a>
-      <a href="#story">story</a>
-      <a href="#history">history</a>
-      <a href="#buy">buy</a>
+  <div class="wrap bar">
+    <a class="mark" href="#top">
+      <img src="brand/icon-32.png" width="32" height="32" alt="" aria-hidden="true">
+      <span>$ZECAT</span>
+    </a>
+    <nav class="nav" aria-label="sections">
+      <a href="#chart">chart</a>
+      <a href="#about">about</a>
+      <a href="#buy">how to buy</a>
       <a href="#memes">memes</a>
       <a href="#posts">posts</a>
-      <a href="#faq">faq</a>
-      <a class="cta" href="https://shld.fun/coin?a=dbc23d99cf614e1146c1c49d8e94646227f71c59cb1c2ea3731ce264c48bc32a" rel="noopener" target="_blank">buy $ZECAT</a>
     </nav>
+    <a class="btn buy" href="https://shld.fun/coin?a=dbc23d99cf614e1146c1c49d8e94646227f71c59cb1c2ea3731ce264c48bc32a" rel="noopener" target="_blank">buy $ZECAT</a>
   </div>
   <div class="pulse" aria-hidden="true"><i id="pulse-bar"></i></div>
 </header>
@@ -73,191 +61,183 @@
 <main id="main" tabindex="-1">
 
 <!-- ============================================================== hero -->
-<div class="wrap hero">
+<section id="top" class="hero"><div class="wrap">
   <div class="hero-grid">
-    <div>
-      <span class="eyebrow">the first token ever launched on shld.fun</span>
+    <div class="hero-copy">
+      <p class="eyebrow">the first token ever launched on shld.fun</p>
       <h1 class="wordmark">ZECAT</h1>
-      <p class="lede">a cat with a shield, on a chain where nobody can see how badly you are doing.</p>
+      <p class="lede">a shielded memecoin on Zcash, from the team that has been building on this chain since before shld.fun existed.</p>
 
-      <dl class="dossier">
-        <div><dt>name</dt><dd>$ZECAT</dd></div>
-        <div><dt>identity</dt><dd>unknown</dd></div>
-        <div><dt>eyes</dt><dd><span class="redacted">redacted</span></dd></div>
-        <div><dt>location</dt><dd>shielded</dd></div>
-        <div><dt>birthplace</dt><dd><a href="https://shld.fun" rel="noopener" target="_blank">shld.fun</a></dd></div>
+      <div class="cta-row">
+        <a class="btn buy lg" href="https://shld.fun/coin?a=dbc23d99cf614e1146c1c49d8e94646227f71c59cb1c2ea3731ce264c48bc32a" rel="noopener" target="_blank">buy on shld.fun</a>
+        <a class="btn ghost lg" href="#buy">how to buy</a>
+      </div>
+
+      <dl class="facts">
+        <div><dt>settles on</dt><dd>Zcash layer 1</dd></div>
+        <div><dt>supply</dt><dd>1,000,000,000</dd></div>
+        <div><dt>lot size</dt><dd>12,500 tokens</dd></div>
       </dl>
+    </div>
 
-      <div class="btns">
-        <a class="btn" href="https://shld.fun/coin?a=dbc23d99cf614e1146c1c49d8e94646227f71c59cb1c2ea3731ce264c48bc32a" rel="noopener" target="_blank">buy on shld.fun</a>
-        <a class="btn ghost" href="#story">read the story</a>
+    <figure class="hero-art">
+      <img src="brand/ZECAT-original-logo.jpg" width="1200" height="1200" fetchpriority="high"
+           alt="the $ZECAT coin. a gold pixel coin carrying a tabby cat whose eyes are hidden behind dark aviators, a Z glyph above his head.">
+      <figcaption>
+        <b id="bells">19,115</b>
+        <span>blocks since the first trade. one every 75 seconds, which is how long a $ZECAT order waits to settle.</span>
+      </figcaption>
+    </figure>
+  </div>
+</div></section>
+
+<!-- ============================================================= chart -->
+<section id="chart"><div class="wrap">
+  <div class="chart-head">
+    <div class="price">
+      <span class="label">price per lot of 12,500</span>
+      <b id="px-main">0.00967 <i>zec</i></b>
+      <span class="sub"><span id="px-usd">$14.67</span> <span id="px-chg" class="delta down">-11.49%</span> <span class="muted">24h</span></span>
+    </div>
+    <div class="chart-tools">
+      <div class="seg" id="tf" role="group" aria-label="candle size">
+        <button type="button" data-tf="15m" aria-pressed="false">15m</button>
+        <button type="button" data-tf="1h" aria-pressed="true">1h</button>
+        <button type="button" data-tf="4h" aria-pressed="false">4h</button>
+        <button type="button" data-tf="1d" aria-pressed="false">1d</button>
+      </div>
+      <div class="seg" id="unit" role="group" aria-label="price unit">
+        <button type="button" data-unit="zec" aria-pressed="true">zec</button>
+        <button type="button" data-unit="usd" aria-pressed="false">usd</button>
       </div>
     </div>
-
-    <div>
-      <div class="coin px"><img src="brand/ZECAT-original-logo.jpg" width="1200" height="1200" alt="the $ZECAT coin. a gold pixel coin carrying a tabby cat whose eyes are hidden behind a dark band, a Z glyph above his head."></div>
-      <p class="bells">
-        <b id="bells">19,115</b>
-        bells since the first trade.
-        one every 75 seconds, same as a Zcash block.
-      </p>
-    </div>
-  </div>
-</div>
-
-<!-- ============================================================== tape -->
-<section id="tape"><div class="wrap">
-  <div class="head">
-    <span class="eyebrow">the tape</span>
-    <h2>the cat does not do numbers.</h2>
-    <p>the chain does. these come off the shld.fun indexer, and the coin page is always more current than this one.</p>
   </div>
 
-  <div class="tape">
-    <div class="cell" data-field="mcap"><span>market cap</span><b>763 zec</b><em>$1.17m</em></div>
-    <div class="cell" data-field="lot"><span>one lot</span><b class="sm">0.0095 zec</b><em>$14.60 per 12,500</em></div>
-    <div class="cell" data-field="liq"><span>liquidity</span><b>92.5 zec</b><em>$141.5k</em></div>
-    <div class="cell" data-field="vol"><span>volume 24h</span><b>7.5 zec</b><em>$11.5k</em></div>
-    <div class="cell" data-field="chg24"><span>change 24h</span><b class="down">-12.65%</b><em>last 24 hours</em></div>
-    <div class="cell" data-field="chg7d"><span>change 7d</span><b class="up">+45.25%</b><em>last 7 days</em></div>
-    <div class="cell" data-field="positions"><span>positions</span><b>2,202</b><em>open on shld.fun</em></div>
-    <div class="cell" data-field="rank"><span>rank</span><b>#1</b><em>of every token there</em></div>
+  <div class="chart-box">
+    <div id="chart-canvas"></div>
+    <p class="chart-msg" id="chart-msg">loading the chain history&hellip;</p>
   </div>
 
-  <p class="tape-foot">
+  <div class="stats" id="stats">
+    <div class="stat" data-field="mcap"><span>market cap</span><b>774 zec <span class="muted">$1.17m</span></b></div>
+    <div class="stat" data-field="liq"><span>liquidity</span><b>93.1 zec <span class="muted">$141.3k</span></b></div>
+    <div class="stat" data-field="vol"><span>volume 24h</span><b>8.0 zec <span class="muted">$12.1k</span></b></div>
+    <div class="stat" data-field="positions"><span>positions</span><b>2,203</b></div>
+    <div class="stat" data-field="rank"><span>rank on shld.fun</span><b>#1</b></div>
+    <div class="stat hi" data-field="shielded"><span>buys funded from shielded</span><b>99.8% <span class="exposed">1 not</span></b></div>
+  </div>
+
+  <p class="chart-foot">
     <span class="chip" id="tape-state">snapshot</span>
-    <span id="tape-stamp">read 20 sep 2026, 20:16 utc</span>
+    <span id="tape-stamp">read 20 sep 2026, 23:03 utc</span>
+    <span class="muted">times on the axis are derived from block height, so they are close but not exact.</span>
     <a href="https://shld.fun/coin?a=dbc23d99cf614e1146c1c49d8e94646227f71c59cb1c2ea3731ce264c48bc32a" rel="noopener" target="_blank">open the live coin page</a>
   </p>
 </div></section>
 
-<!-- ============================================================= story -->
-<section id="story"><div class="wrap">
+<!-- ============================================================= about -->
+<section id="about"><div class="wrap">
   <div class="head">
-    <span class="eyebrow">the story</span>
-    <h2>two places. one of them has walls you can see through.</h2>
-    <p>all of it grows out of something true about Zcash. the upgrades really were called sprout, then sapling, then orchard. a seed, a young tree, a grove.</p>
+    <p class="eyebrow">what this is</p>
+    <h2>a memecoin that settles on a chain where nobody can see how your week went.</h2>
   </div>
 
-  <div class="realms">
-    <div class="realm glass">
-      <span class="tagline">t1&hellip; transparent</span>
-      <h3>the glass city</h3>
-      <p>a city built out of glass. you can see through every wall. everyone knows whose wallet is whose, who bought what, who is down how much, who woke at three in the morning to hit sell.</p>
-      <p>nobody here is cruel. they are simply never left alone, and it has made them strange. they talk louder than they need to. they explain themselves too much.</p>
-    </div>
-    <div class="realm px">
-      <span class="tagline">u1&hellip; shielded</span>
-      <h3>the orchard</h3>
-      <p>warm and dark. three or four flat trees and one gold lantern hanging off a branch. nothing spooky about it. this is where people come home.</p>
-      <p>you can prove a thing here without showing it. nobody can count how many of us are inside, and that includes the ones already in.</p>
-    </div>
+  <div class="cards">
+    <article class="card">
+      <h3>shielded by default</h3>
+      <p>$ZECAT trades through shld.fun, which settles to shielded Zcash addresses only. pay from a shielded balance and the buy can stay off the public ledger. pay from a transparent address and that link sits on chain.</p>
+    </article>
+    <article class="card">
+      <h3>not a new team</h3>
+      <p>shld.fun is built by the people behind Zecscriptions, the ZRC-20 inscription platform that has been running on Zcash since before this. same team, same chain, a different mechanism.</p>
+    </article>
+    <article class="card">
+      <h3>the first one through the door</h3>
+      <p>$ZECAT was the first asset ever issued on the platform, and it still holds the lowest issue block there. that is not a slogan, it is a number on a public chain.</p>
+    </article>
   </div>
 
-  <div class="laws">
-    <div class="law"><b>01</b><span>in the orchard you prove it without showing it.</span></div>
-    <div class="law"><b>02</b><span>every 75 seconds a gold bell rings. the whole world pauses a beat, then carries on.</span></div>
-    <div class="law"><b>03</b><span>nobody can count how many cats are in the orchard. not even the cats.</span></div>
-    <div class="law"><b>04</b><span>from the glass city the orchard is just fog. from the orchard you can see the whole glass city.</span></div>
-    <div class="law"><b>05</b><span>anyone who walks in from the glass city leaves pawprints at the door.</span></div>
-    <div class="law"><b>06</b><span>the cat does not explain.</span></div>
-    <div class="law"><b>07</b><span>nobody has ever seen his eyes.</span></div>
-  </div>
+  <ol class="timeline">
+    <li><span class="when">3 sep &middot; 02:32 utc</span><span class="blk">block 3,470,011</span><p>the asset is issued on Zcash mainnet, written as a shielded memo.</p></li>
+    <li class="key"><span class="when">3 sep &middot; 09:06 utc</span><span class="blk">block 3,470,323</span><p>first trade, thirteen minutes before anybody announced anything.</p></li>
+    <li><span class="when">3 sep &middot; 09:25 utc</span><span class="blk">block 3,470,344</span><p>graduated from the bonding curve to a liquidity pool, nineteen minutes after that first trade.</p></li>
+    <li><span class="when">3 sep &middot; 09:35 utc</span><span class="blk">block 3,470,352</span><p>the second token on shld.fun is issued. $ZECAT keeps the lowest issue block, and still keeps it.</p></li>
+  </ol>
 
-  <p class="ceremony">they made a key.
-then they burned it.
-nobody kept a copy.
-    <small>
-      in 2016 Zcash was born out of a ceremony. people in different places each built one piece of a parameter, then destroyed the hardware they built it on, so that nobody could ever put the pieces back together. the scraps have a name of their own: toxic waste. which is why, around here, nobody knows anything. 🛡️
-    </small>
+  <p class="verify">
+    every line above is a block height on Zcash mainnet.
+    <a href="https://mainnet.zcashexplorer.app/transactions/42d760d348a4f6aab362ea794249e64e906b4509c093837b109e5fdcd74e540f" rel="noopener" target="_blank">open the issue transaction</a>
+    and check it yourself.
   </p>
 </div></section>
 
-<!-- =========================================================== history -->
-<section id="history"><div class="wrap">
-  <div class="head">
-    <span class="eyebrow">history</span>
-    <h2>one morning in september, on a chain that had never done this.</h2>
-    <p>times in utc. the block heights are on Zcash mainnet and anyone can go and look at them.</p>
-  </div>
-
-  <div class="tl">
-    <div class="ev key">
-      <span class="when">3 sep &middot; 02:32</span><span class="blk">block 3,470,011</span>
-      <p>the asset is issued on Zcash mainnet, written as a shielded memo. a transaction anyone can find and nobody can read.</p>
-    </div>
-    <div class="ev">
-      <span class="when">3 sep &middot; 06:44</span><span class="blk">block 3,470,214</span>
-      <p>finalize. the market deploys. four hours and eleven minutes after the birth transaction.</p>
-    </div>
-    <div class="ev key">
-      <span class="when">3 sep &middot; 09:06</span><span class="blk">block 3,470,323</span>
-      <p>first trade. thirteen minutes before anybody announced anything.</p>
-    </div>
-    <div class="ev">
-      <span class="when">3 sep &middot; 09:19</span>
-      <p>@SHLDdotfun posts that shld.fun is live on Zcash, and the first token on it is $ZECAT. one billion supply, settling on layer 1.</p>
-    </div>
-    <div class="ev key">
-      <span class="when">3 sep &middot; 09:25</span><span class="blk">block 3,470,344</span>
-      <p>graduated. nineteen minutes and fifteen seconds after the first trade, which is about fifteen bells.</p>
-    </div>
-    <div class="ev">
-      <span class="when">3 sep &middot; 09:35</span><span class="blk">block 3,470,352</span>
-      <p>the second token on shld.fun is issued. $ZECAT keeps the lowest issue block on the platform, and still keeps it.</p>
-    </div>
-    <div class="ev">
-      <span class="when">8 sep</span>
-      <p>the wanted poster goes up. identity unknown, eyes redacted, location shielded, birthplace shld.fun.</p>
-    </div>
-    <div class="ev">
-      <span class="when">19 sep</span><span class="blk">block 3,489,336</span>
-      <p>330 assets live on shld.fun. the first one is still holding rank one.</p>
-    </div>
-  </div>
-</div></section>
-
-<!-- ============================================================== buy -->
+<!-- =============================================================== buy -->
 <section id="buy"><div class="wrap">
   <div class="head">
-    <span class="eyebrow">how to buy</span>
-    <h2>five steps. shielded ZEC in, tokens out.</h2>
-    <p>pay from a shielded balance and the buy can stay off the public ledger. pay from a transparent address and that link sits on chain. reused addresses, exchange withdrawals and timing are not shielded either. law five, doing its job.</p>
+    <p class="eyebrow">how to buy</p>
+    <h2>four things to understand before you send anything.</h2>
+    <p class="sub">this chain is slower and stricter than what you are used to. none of it is broken, it just works differently. read the four parts once and nothing will surprise you.</p>
   </div>
 
   <div class="steps">
-    <div class="step"><b>01</b><h3>get shielded ZEC</h3><p>shld.fun recommends zodl. zingo, ywallet, zecwallet, noir and nighthawk work too.</p></div>
-    <div class="step"><b>02</b><h3>open shld.fun</h3><p>a wallet is generated in your browser. save the private key. never share it with anyone, the cat included.</p></div>
-    <div class="step"><b>03</b><h3>pick $ZECAT, hit buy</h3><p>enter how much ZEC you want to spend. orders fill in lots of 12,500 tokens.</p></div>
-    <div class="step"><b>04</b><h3>set a refund address</h3><p>shielded or transparent, both work. this is where change and any later sale lands.</p></div>
-    <div class="step"><b>05</b><h3>send, wait one bell</h3><p>send ZEC to the address shown. tokens arrive once the block confirms, about 75 seconds.</p></div>
+
+    <article class="step">
+      <span class="n">01</span>
+      <h3>funding</h3>
+      <p>Zcash has two address types. <b>shielded</b> addresses start with <code>u1</code>, <b>transparent</b> ones start with <code>t1</code>. money moves freely between them, there is nothing to memorise.</p>
+      <p>shld.fun settles to shielded addresses only, so you need a wallet that supports <code>u1</code>:</p>
+      <ul class="wallets">
+        <li><a href="https://zodl.com" rel="noopener" target="_blank">zodl</a> <em>recommended by the platform. its built-in swap bridges SOL, EVM chains and more straight into Zcash.</em></li>
+        <li>zingo</li><li>ywallet</li><li>zecwallet</li><li>noir</li><li>nighthawk</li>
+      </ul>
+      <p class="note">once the ZEC lands, shield it before you trade.</p>
+    </article>
+
+    <article class="step">
+      <span class="n">02</span>
+      <h3>trading</h3>
+      <p>create a trading wallet on the platform and <b>save the seed phrase offline</b>. every token you buy lives in that wallet and never leaves it. lose the phrase, lose the bag. nobody can recover it for you.</p>
+      <p><b>buying.</b> set a refund address first, shielded or transparent both work. the platform then generates a deposit address and tells you the exact amount to send. send exactly that amount. after three to five confirmations the token shows up in your portfolio on shld.fun.</p>
+      <p><b>selling.</b> enter a receiver address and your ZEC arrives there once the order fills. shielded or transparent, both work.</p>
+      <p class="note">zodl generates a new address after every transaction. old and new belong to the same wallet tree, so nothing is lost if you misplace one.</p>
+    </article>
+
+    <article class="step">
+      <span class="n">03</span>
+      <h3>slippage</h3>
+      <p>orders settle a few blocks after they are quoted, so on busy blocks the price moves in between. a fill at a worse price than the quote is normal market behaviour here, not a bug. size your trades with that in mind.</p>
+      <p>orders are <b>all or nothing</b>. they fill completely or they get refunded. there is no such thing as a partial fill.</p>
+      <p class="note">every fill is a whole number of lots, and one lot is 12,500 tokens. that is why the amounts look the way they do.</p>
+    </article>
+
+    <article class="step">
+      <span class="n">04</span>
+      <h3>patience</h3>
+      <p>depending on how busy the network is, a single trade can take anywhere from <b>five minutes to two hours</b>. this is the original privacy chain and the wait is part of it.</p>
+      <p class="note">if your trade has not appeared yet, it is almost certainly still waiting for blocks. check your portfolio on shld.fun before assuming anything went wrong.</p>
+    </article>
+
   </div>
 
-  <div class="facts">
-    <div class="fact"><span>total supply</span><b>1,000,000,000</b></div>
-    <div class="fact"><span>lot size</span><b>12,500 tokens</b></div>
-    <div class="fact"><span>settles in</span><b>ZEC on layer 1</b></div>
-    <div class="fact"><span>written as</span><b>shielded memos</b></div>
-    <div class="fact"><span>curve</span><b>graduated 3 sep</b></div>
-    <div class="fact"><span>on shld.fun</span><b>first ever listed</b></div>
-  </div>
-
-  <div class="idbox px">
-    <span>asset id. paste this, do not search the name</span>
+  <div class="idbox">
+    <span class="label">asset id. paste this, do not search the name</span>
     <code>dbc23d99cf614e1146c1c49d8e94646227f71c59cb1c2ea3731ce264c48bc32a</code>
-    <div class="btns">
+    <div class="cta-row">
+      <a class="btn buy" href="https://shld.fun/coin?a=dbc23d99cf614e1146c1c49d8e94646227f71c59cb1c2ea3731ce264c48bc32a" rel="noopener" target="_blank">open the coin page</a>
       <button class="btn ghost" type="button" data-copy="asset">copy asset id</button>
-      <a class="btn ghost" href="https://mainnet.zcashexplorer.app/transactions/42d760d348a4f6aab362ea794249e64e906b4509c093837b109e5fdcd74e540f" rel="noopener" target="_blank">see the birth tx</a>
+      <a class="btn ghost" href="https://t.me/shlddotfun" rel="noopener" target="_blank">platform support</a>
     </div>
   </div>
+
+  <p class="warn">nobody from $ZECAT will message you first. there is no support desk here, no claim portal, no presale and no airdrop form. the only rooms that are ours are the ones at the bottom of this page.</p>
 </div></section>
 
 <!-- ============================================================ memes -->
 <section id="memes"><div class="wrap">
   <div class="head">
-    <span class="eyebrow">community memes</span>
+    <p class="eyebrow">community memes</p>
     <h2>the cat is a shared asset. take what you need.</h2>
-    <p>made by whoever shows up. open one, remix it, post it. no permission needed and no credit required.</p>
+    <p class="sub">made by whoever shows up. open one, remix it, post it. no permission needed and no credit required.</p>
   </div>
 
   <div class="filters" id="filters" role="group" aria-label="filter memes by kind">
@@ -349,13 +329,12 @@ nobody kept a copy.
 <!-- ============================================================ posts -->
 <section id="posts"><div class="wrap">
   <div class="head">
-    <span class="eyebrow">transmissions</span>
-    <h2>everything the cat has said out loud.</h2>
-    <p>kept here so it does not only live on somebody else's timeline.</p>
+    <p class="eyebrow">from @ZecatZcash</p>
+    <h2>straight off the timeline.</h2>
   </div>
 
   <div class="posts" id="postgrid">
-    <a class="post pin" href="https://x.com/ZecatZcash/status/2097315787010936926" rel="noopener" target="_blank">
+    <a class="post pin" href="https://x.com/ZecatZcash/status/2097315787010936926" rel="noopener" target="_blank" data-tweet="2097315787010936926">
       <span class="meta"><span class="pinflag">pinned</span><span>8 sep 2026</span><span>2.9k views</span></span>
       <span class="body">wanted on Zcash
 
@@ -370,22 +349,24 @@ crime: becoming the first meme coin on Zcash
 the chase has begun. 🐈</span>
       <span class="go">read on x</span>
     </a>
-    <a class="post" href="https://x.com/ZecatZcash/status/2100948668342030832" rel="noopener" target="_blank">
+    <a class="post" href="https://x.com/ZecatZcash/status/2096742356544598058" rel="noopener" target="_blank" data-tweet="2096742356544598058">
+      <span class="meta"><span>7 sep 2026</span><span>7.8k views</span></span>
+      <span class="body">@SHLDdotfun has been live on @Zcash for 3 days. here is the complete walkthrough, every step.
+
+funding, trading, slippage, patience.</span>
+      <span class="go">read on x</span>
+    </a>
+    <a class="post" href="https://x.com/ZecatZcash/status/2100948668342030832" rel="noopener" target="_blank" data-tweet="2100948668342030832">
       <span class="meta"><span>18 sep 2026</span><span>848 views</span></span>
       <span class="body">everyone is running around, unaware that something big is brewing.</span>
       <span class="go">read on x</span>
     </a>
-    <a class="post" href="https://x.com/ZecatZcash/status/2101168271525601470" rel="noopener" target="_blank">
+    <a class="post" href="https://x.com/ZecatZcash/status/2101168271525601470" rel="noopener" target="_blank" data-tweet="2101168271525601470">
       <span class="meta"><span>19 sep 2026</span><span>823 views</span></span>
       <span class="body">interesting. all signs point to zec season.</span>
       <span class="go">read on x</span>
     </a>
-    <a class="post" href="https://x.com/ZecatZcash/status/2101345110785216721" rel="noopener" target="_blank">
-      <span class="meta"><span>19 sep 2026</span><span>323 views</span></span>
-      <span class="body">soon, you will understand why.</span>
-      <span class="go">read on x</span>
-    </a>
-    <a class="post" href="https://x.com/ZecatZcash/status/2101413934301696033" rel="noopener" target="_blank">
+    <a class="post" href="https://x.com/ZecatZcash/status/2101413934301696033" rel="noopener" target="_blank" data-tweet="2101413934301696033">
       <span class="meta"><span>19 sep 2026</span><span>143 views</span></span>
       <span class="body">$ZECAT does not want you to become somebody else's exit liquidity.</span>
       <span class="go">read on x</span>
@@ -393,40 +374,19 @@ the chase has begun. 🐈</span>
   </div>
 </div></section>
 
-<!-- ============================================================== faq -->
-<section id="faq"><div class="wrap">
-  <div class="head">
-    <span class="eyebrow">questions</span>
-    <h2>the ones the telegram asks every day.</h2>
-  </div>
-
-  <div class="faq">
-    <details><summary>what is $ZECAT</summary><p class="a">a meme token on Zcash, traded through shld.fun. one billion of them. the first token ever launched on that platform. it holds the lowest issue block there and anyone can check that on chain.</p></details>
-    <details><summary>what is shld.fun, is it part of Zcash</summary><p class="a">a market for shielded tokens built on Zcash. it is an independent project. not Electric Coin Co. and not the Zcash Foundation. experimental tech, interact at your own risk.</p></details>
-    <details><summary>how do i buy it</summary><p class="a">get shielded ZEC in a wallet, open shld.fun, pick $ZECAT, send ZEC to the address it gives you. the five steps are further up this page.</p></details>
-    <details><summary>why does my trade take a minute to show up</summary><p class="a">a Zcash block lands about every 75 seconds. your order settles on layer 1 and waits for one. that is the whole delay.</p></details>
-    <details><summary>is this actually private</summary><p class="a">pay from a shielded balance and that buy can stay off the public ledger. pay from a transparent address and that link is on chain forever. reused addresses, exchange withdrawals and timing are not shielded either.</p></details>
-    <details><summary>why do orders fill in lots of 12,500</summary><p class="a">the supply is cut into 80,000 units. one unit is 12,500 tokens. every fill is a whole number of units, so every trade you see is a multiple of 12,500.</p></details>
-    <details><summary>what does graduated mean</summary><p class="a">the token started on a bonding curve and moved to a liquidity pool once enough was sold. $ZECAT did that on 3 september, nineteen minutes after its first trade.</p></details>
-    <details><summary>what is the deal with 75 seconds</summary><p class="a">it is the Zcash block time. in this world it is a gold bell that rings, everything pauses a beat, then carries on. 1,152 of them in a day. the cat counts in bells.</p></details>
-    <details><summary>somebody messaged me about $ZECAT, is that you</summary><p class="a">no. nobody here messages first. there is no support desk, no claim portal, no presale and no airdrop form. every real room is listed below.</p></details>
-  </div>
-</div></section>
-
-<!-- ============================================================ rooms -->
+<!-- ============================================================ links -->
 <section id="links"><div class="wrap">
   <div class="head">
-    <span class="eyebrow">official rooms</span>
-    <h2>if it is not on this page, it is not us.</h2>
-    <p>nobody here will message you first. not for support, not for a claim, not for a partnership.</p>
+    <p class="eyebrow">official rooms</p>
+    <h2>if it is not on this row, it is not us.</h2>
   </div>
-  <div class="links">
-    <a class="lk" href="https://shld.fun/coin?a=dbc23d99cf614e1146c1c49d8e94646227f71c59cb1c2ea3731ce264c48bc32a" rel="noopener" target="_blank"><b>shld.fun</b><span>the coin page</span><em>buy, sell, live chart</em></a>
-    <a class="lk" href="https://x.com/ZecatZcash" rel="noopener" target="_blank"><b>x</b><span>@ZecatZcash</span><em>the cat, posting</em></a>
-    <a class="lk" href="https://t.me/zcashalpha" rel="noopener" target="_blank"><b>telegram</b><span>t.me/zcashalpha</span><em>$ZECAT alpha</em></a>
-    <a class="lk" href="https://x.com/SHLDdotfun" rel="noopener" target="_blank"><b>@SHLDdotfun</b><span>the platform</span><em>where the cat lives</em></a>
-    <a class="lk" href="https://mainnet.zcashexplorer.app/transactions/42d760d348a4f6aab362ea794249e64e906b4509c093837b109e5fdcd74e540f" rel="noopener" target="_blank"><b>explorer</b><span>the issue tx</span><em>block 3,470,011</em></a>
-    <a class="lk" href="https://z.cash/learn/what-is-zcash/" rel="noopener" target="_blank"><b>Zcash</b><span>what this runs on</span><em>the chain itself</em></a>
+  <div class="rooms">
+    <a class="room" href="https://shld.fun/coin?a=dbc23d99cf614e1146c1c49d8e94646227f71c59cb1c2ea3731ce264c48bc32a" rel="noopener" target="_blank"><b>shld.fun</b><span>buy and sell</span></a>
+    <a class="room" href="https://x.com/ZecatZcash" rel="noopener" target="_blank"><b>x</b><span>@ZecatZcash</span></a>
+    <a class="room" href="https://t.me/zcashalpha" rel="noopener" target="_blank"><b>telegram</b><span>$ZECAT alpha</span></a>
+    <a class="room" href="https://x.com/SHLDdotfun" rel="noopener" target="_blank"><b>platform</b><span>@SHLDdotfun</span></a>
+    <a class="room" href="https://t.me/shlddotfun" rel="noopener" target="_blank"><b>support</b><span>platform help</span></a>
+    <a class="room" href="https://mainnet.zcashexplorer.app/transactions/42d760d348a4f6aab362ea794249e64e906b4509c093837b109e5fdcd74e540f" rel="noopener" target="_blank"><b>explorer</b><span>the issue tx</span></a>
   </div>
 </div></section>
 
@@ -434,24 +394,20 @@ the chase has begun. 🐈</span>
 
 <footer><div class="wrap">
   <div class="truths">
-    <div class="truth">
-      <b>on shld.fun</b>
-      <p>an independent project. not Electric Coin Co. and not the Zcash Foundation. experimental tech, interact at your own risk.</p>
-    </div>
-    <div class="truth">
-      <b>on privacy</b>
-      <p>shielded funding can keep a buyer off the public ledger. transparent funding does not. reused addresses, exchange withdrawals and timing are not shielded either.</p>
-    </div>
-    <div class="truth">
-      <b>on what this is</b>
-      <p>$ZECAT will not make you rich. $ZECAT is a cat. what it will do is exist on a chain where nobody can see how your week went.</p>
-    </div>
+    <div><b>on shld.fun</b><p>an independent project. not Electric Coin Co. and not the Zcash Foundation. experimental tech, interact at your own risk.</p></div>
+    <div><b>on privacy</b><p>shielded funding can keep a buyer off the public ledger. transparent funding does not. reused addresses, exchange withdrawals and timing are not shielded either.</p></div>
+    <div><b>on what this is</b><p>$ZECAT will not make you rich. $ZECAT is a cat. what it will do is exist on a chain where nobody can see how your week went.</p></div>
   </div>
-  <p class="sign">
-    <span class="mark">the visor stays on. 🛡️</span>
-    <span>nobody knows.</span>
-  </p>
+  <p class="sign"><span>the visor stays on. 🛡️</span><span>nobody knows.</span></p>
 </div></footer>
+
+<!-- thanh mua noi, hien ra sau khi cuon qua hero -->
+<div class="buybar" id="buybar" hidden>
+  <div class="wrap">
+    <span class="bb-price"><b id="bb-main">&mdash;</b><span id="bb-chg" class="delta"></span></span>
+    <a class="btn buy" href="https://shld.fun/coin?a=dbc23d99cf614e1146c1c49d8e94646227f71c59cb1c2ea3731ce264c48bc32a" rel="noopener" target="_blank">buy $ZECAT</a>
+  </div>
+</div>
 
 <div class="lb" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="meme viewer">
   <figure>
@@ -467,6 +423,7 @@ the chase has begun. 🐈</span>
   </figure>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js" defer></script>
 <script src="assets/site.js" defer></script>
 </body>
 </html>

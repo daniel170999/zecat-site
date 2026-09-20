@@ -185,18 +185,36 @@ function jpegSize(buf) {
 }
 
 /* ==========================================================================
-   --tape  ·  lam moi so lieu thi truong da nuong san
+   --tape  ·  lam moi moi con so da nuong san, va ban du phong cua bieu do
    --------------------------------------------------------------------------
    Khach tat javascript, va con bot cua Google hay X, chi thay nhung con so
-   nam san trong index.html. Chung KHONG duoc phep la so bia: moi o deu di kem
-   moc thoi gian va link ve coin page, dung luat claim trong CLAUDE.md.
+   nam san trong index.html. Chung KHONG duoc phep la so bia: moi con so deu
+   di kem moc thoi gian va link ve coin page, dung luat claim trong CLAUDE.md.
 
-   Lenh nay doc thang indexer bang chinh ham derive() cua api/tape.js, khong
-   chep lai cong thuc, roi ghi ba cho trong cung mot lan.
+   Lenh nay goi thang hai route trong api/ chu khong chep lai cong thuc cua
+   chung, roi ghi nam cho trong cung mot lan:
+     public/data/tape.json    ban du phong cua bang so
+     public/data/chart.json   ban du phong cua bieu do, khi host khong co api
+     public/index.html        gia o dau, sau o thong ke, va dong moc thoi gian
+     api/tape.js              hang so SNAPSHOT
    ========================================================================== */
 
 if (process.argv.includes('--tape')) {
   const { derive, getJson, TOKENS_URL, ZEC_USD_URL } = await import('../api/tape.js');
+  const { default: chartHandler } = await import('../api/chart.js');
+
+  /* Goi route bieu do y het cach Vercel goi no, de ban du phong khong the
+     khac voi ban that. Vercel dua vao handler mot doi tuong response kieu
+     Node; o day dung mot cai gia chi de bat lay than tra ve. */
+  const chartBody = await new Promise((resolve, reject) => {
+    let payload = '';
+    const res = {
+      setHeader() {},
+      status() { return res; },
+      end(b) { payload = b; resolve(JSON.parse(payload || '{}')); },
+    };
+    chartHandler({ method: 'GET', url: '/api/chart', query: {} }, res).catch(reject);
+  });
 
   const [tokens, zecUsd] = await Promise.all([getJson(TOKENS_URL), getJson(ZEC_USD_URL)]);
   const live = derive(tokens, zecUsd);
@@ -221,25 +239,8 @@ if (process.argv.includes('--tape')) {
   };
 
   const z = d.zecUsd;
-  const lot = d.priceZecPerToken * 12500;
-  const sign = (n) => (n >= 0 ? '+' : '');
-
-  const cells = {
-    mcap:      [nf(d.mcapZec, 0) + ' zec',   usd(d.mcapZec * z)],
-    lot:       [nf(lot, 4) + ' zec',         usd(lot * z) + ' per 12,500'],
-    liq:       [nf(d.liqZec, 1) + ' zec',    usd(d.liqZec * z)],
-    vol:       [nf(d.vol24Zec, 1) + ' zec',  usd(d.vol24Zec * z)],
-    chg24:     [sign(d.change24Pct) + nf(d.change24Pct, 2) + '%', 'last 24 hours'],
-    chg7d:     [sign(d.change7dPct) + nf(d.change7dPct, 2) + '%', 'last 7 days'],
-    positions: [Number(d.positions).toLocaleString('en-us'), 'open on shld.fun'],
-    rank:      ['#' + d.rank,                'of every token there'],
-  };
-
-  const cellClass = {
-    lot: 'sm',
-    chg24: d.change24Pct >= 0 ? 'up' : 'down',
-    chg7d: d.change7dPct >= 0 ? 'up' : 'down',
-  };
+  const perLot = d.priceZecPerToken * 12500;
+  const money = (v, k) => nf(v, k) + ' zec <span class="muted">' + usd(v * z) + '</span>';
 
   const at = new Date(live.takenAt);
   const MON = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
@@ -248,36 +249,78 @@ if (process.argv.includes('--tape')) {
     'read ' + at.getUTCDate() + ' ' + MON[at.getUTCMonth()] + ' ' + at.getUTCFullYear() +
     ', ' + pad(at.getUTCHours()) + ':' + pad(at.getUTCMinutes()) + ' utc';
 
-  /* ---- 1. ban du phong tinh ---- */
+  /* ---- 1. hai ban du phong tinh ---- */
   await writeFile(
     join(dataDir, 'tape.json'),
     JSON.stringify({ ok: true, source: 'snapshot', takenAt: live.takenAt, data: d }, null, 2) + '\n',
   );
 
-  /* ---- 2. tam o trong index.html ----
+  const chartPoints = Array.isArray(chartBody.points) ? chartBody.points.length : 0;
+  if (chartPoints > 1) {
+    await writeFile(
+      join(dataDir, 'chart.json'),
+      JSON.stringify({ ...chartBody, source: 'snapshot' }) + '\n',
+    );
+  } else {
+    console.error('sync-data --tape: /api/chart khong tra ve lich su, bo qua chart.json');
+  }
+
+  /* ---- 2. con so trong index.html ----
      Thay bang HAM chu khong bang chuoi: gia tri usd co dau $, va '$1.01m'
      trong mot chuoi thay the se bi doc thanh nhom bat so 1. */
   let page = await readFile(htmlPath, 'utf8');
   let patched = 0;
-  for (const [field, pair] of Object.entries(cells)) {
-    const re = new RegExp(
-      '(<div class="cell" data-field="' + field + '"><span>[^<]*</span>)<b[^>]*>[^<]*</b><em>[^<]*</em>',
-    );
+
+  const put = (re, value, what) => {
     if (!re.test(page)) {
-      console.error('sync-data --tape: khong tim thay o "' + field + '" trong index.html');
+      console.error('sync-data --tape: khong tim thay ' + what + ' trong index.html');
       process.exit(1);
     }
-    const c = cellClass[field] ? ' class="' + cellClass[field] + '"' : '';
-    page = page.replace(re, (_m, head) => head + '<b' + c + '>' + pair[0] + '</b><em>' + pair[1] + '</em>');
+    page = page.replace(re, (_m, a, b) => a + value + b);
     patched++;
+  };
+
+  put(/(<b id="px-main">)[\s\S]*?(<\/b>)/, nf(perLot, 5) + ' <i>zec</i>', 'gia o dau');
+  put(/(<span id="px-usd">)[^<]*(<\/span>)/, usd(perLot * z), 'gia usd');
+
+  /* dau va lop len/xuong phai khop voi cai site.js se ve lai */
+  const chg = d.change24Pct;
+  page = page.replace(
+    /<span id="px-chg" class="delta[^"]*">[^<]*<\/span>/,
+    () => '<span id="px-chg" class="delta ' + (chg >= 0 ? 'up' : 'down') + '">' +
+          (chg >= 0 ? '+' : '') + nf(chg, 2) + '%</span>',
+  );
+  patched++;
+
+  const tiles = {
+    mcap: money(d.mcapZec, 0),
+    liq: money(d.liqZec, 1),
+    vol: money(d.vol24Zec, 1),
+    positions: Number(d.positions).toLocaleString('en-us'),
+    rank: '#' + d.rank,
+  };
+
+  /* Ty le nguon von. Phan transparent duoc to xam — do la cho duy nhat tren
+     trang duoc dung mau xam, va no dung nghia den trong CHARACTER.md muc 3:
+     xam la thu da bi phoi ra cong khai. */
+  const f = chartBody.funding;
+  if (f && f.sampled > 0) {
+    const pct = (f.shielded / f.sampled) * 100;
+    tiles.shielded = nf(pct, 1) + '%' +
+      (f.transparent > 0
+        ? ' <span class="exposed">' + f.transparent + ' not</span>'
+        : '');
   }
 
-  const stampRe = /(<span id="tape-stamp">)[^<]*(<\/span>)/;
-  if (!stampRe.test(page)) {
-    console.error('sync-data --tape: khong tim thay #tape-stamp trong index.html');
-    process.exit(1);
+  for (const [field, value] of Object.entries(tiles)) {
+    put(
+      new RegExp('(<div class="stat[^"]*" data-field="' + field + '"><span>[^<]*</span><b>)[\\s\\S]*?(</b>)'),
+      value,
+      'o thong ke "' + field + '"',
+    );
   }
-  page = page.replace(stampRe, (_m, a, b) => a + stamp + b);
+
+  put(/(<span id="tape-stamp">)[^<]*(<\/span>)/, stamp, 'moc thoi gian');
   await writeFile(htmlPath, page);
 
   /* ---- 3. hang so SNAPSHOT trong api/tape.js ---- */
@@ -302,9 +345,9 @@ if (process.argv.includes('--tape')) {
     '  }),\n});';
   await writeFile(tapePath, tapeSrc.slice(0, start) + literal + tapeSrc.slice(end + 4));
 
-  console.log('sync-data --tape: ' + patched + ' o tape + moc thoi gian trong index.html');
-  console.log('  tape.json va hang so SNAPSHOT trong api/tape.js deu theo ban doc nay');
-  console.log('  ' + stamp + ' | mcap ' + cells.mcap[0] + ' | block ' + d.tipHeight);
+  console.log('sync-data --tape: ' + patched + ' cho trong index.html');
+  console.log('  chart.json: ' + chartPoints + ' diem gia, tu block ' + chartBody.anchorHeight);
+  console.log('  ' + stamp + ' | ' + nf(perLot, 5) + ' zec mot lo | block ' + d.tipHeight);
 }
 
 /* ==========================================================================

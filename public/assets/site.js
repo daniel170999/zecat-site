@@ -1,18 +1,19 @@
 /* ===========================================================================
    $ZECAT site runtime
    ---------------------------------------------------------------------------
-   Progressive enhancement, on purpose. Every meme, post and market number is
-   already in the html when this file loads, so the page is complete with
-   javascript switched off and complete before a single request returns.
+   Progressive enhancement, on purpose. Every meme, post and disclaimer is
+   already in the html when this file loads, so the page reads correctly with
+   javascript switched off and correctly before a single request returns.
 
    What this file adds on top:
-     - the live 75 second block pulse and the bell counter
-     - upgrading the baked market snapshot to live numbers from /api/tape
+     - the live 75 second block pulse and the block counter
+     - the price header, the six stat tiles and the floating buy bar
+     - the candlestick chart, built from one pull of the whole chain history
      - gallery filtering and the lightbox
+     - real X embeds, with the static cards left in place when they fail
      - appending memes and posts that exist in D1 but are not baked in yet
-     - copy to clipboard
 
-   Data flow for every list:  baked html  ->  /api/<thing>  ->  append new only.
+   Data flow everywhere:  baked html  ->  /api/<thing>  ->  upgrade in place.
    A failed request is not an error state here. The page was already correct.
    =========================================================================== */
 
@@ -22,10 +23,13 @@
   const $  = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
-  const ASSET_ID   = document.documentElement.dataset.asset || '';
+  const ASSET_ID    = document.documentElement.dataset.asset || '';
   const FIRST_TRADE = Date.parse('2026-09-03T09:05:51Z');  // block 3,470,323
   const BELL_MS     = 75000;                               // one Zcash block, near enough
-  const REQ_TIMEOUT = 7000;
+  const REQ_TIMEOUT = 12000;
+  const LOT         = 12500;
+
+  const ok = (n) => typeof n === 'number' && isFinite(n);
 
   const nf = (n, d = 2) => Number(n).toLocaleString('en-us', {
     minimumFractionDigits: d, maximumFractionDigits: d,
@@ -37,6 +41,8 @@
     if (n >= 1e3) return '$' + nf(n / 1e3, 1) + 'k';
     return '$' + nf(n, 2);
   };
+
+  const signed = (n, d = 2) => (n >= 0 ? '+' : '') + nf(n, d) + '%';
 
   async function getJSON(url) {
     const ctl = new AbortController();
@@ -50,9 +56,24 @@
     }
   }
 
+  /* Exactly the shape tools/sync-data.mjs bakes into the html:
+     "read 20 sep 2026, 22:49 utc". Built by hand rather than with
+     toUTCString, which returns "Sun, 20 Sep 2026 22:49:00 GMT" and breaks the
+     lowercase rule in VOICE.md on a line every visitor reads. */
+  const MON = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  const pad = (n) => String(n).padStart(2, '0');
+
+  function readStamp(iso) {
+    const t = Date.parse(iso);
+    if (!isFinite(t)) return '';
+    const d = new Date(t);
+    return 'read ' + d.getUTCDate() + ' ' + MON[d.getUTCMonth()] + ' ' + d.getUTCFullYear() +
+      ', ' + pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ' utc';
+  }
+
   /* ------------------------------------------------- the 75 second heartbeat */
   function heartbeat() {
-    const bar  = $('#pulse-bar');
+    const bar = $('#pulse-bar');
     const count = $('#bells');
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -76,98 +97,252 @@
     requestAnimationFrame(frame);
   }
 
-  /* ----------------------------------------------------------------- the tape */
+  /* ------------------------------------------------ price header and stats */
 
-  /* Exactly the shape tools/sync-data.mjs bakes into the html:
-     "read 20 sep 2026, 11:01 utc". Built by hand rather than with
-     toUTCString, which returns "Sun, 20 Sep 2026 11:01:00 GMT" and breaks the
-     lowercase rule in VOICE.md on a line every visitor reads. */
-  const MON = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
-  const pad = (n) => String(n).padStart(2, '0');
-  const ok  = (n) => typeof n === 'number' && isFinite(n);
-
-  function readStamp(iso) {
-    const t = Date.parse(iso);
-    if (!isFinite(t)) return '';
-    const d = new Date(t);
-    return 'read ' + d.getUTCDate() + ' ' + MON[d.getUTCMonth()] + ' ' + d.getUTCFullYear() +
-      ', ' + pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ' utc';
+  function setStat(field, html) {
+    const cell = $('.stat[data-field="' + field + '"] b');
+    if (cell) cell.innerHTML = html;
   }
 
-  function paintTape(d, meta) {
+  function paintMarket(d, meta) {
     const zec = Number(d.zecUsd);
-    const lot = Number(d.priceZecPerToken) * 12500;
+    const perLot = Number(d.priceZecPerToken) * LOT;
+    const chg = Number(d.change24Pct);
 
-    /* A cell is only overwritten when the incoming number is real. Anything
-       else keeps whatever is baked into the html, which is timestamped and
-       carries a link to the source, rather than showing NaN or a bare $0.00. */
-    const set = (field, value, big, sub, cls) => {
-      if (!ok(value)) return;
-      const cell = $(`[data-field="${field}"]`);
-      if (!cell) return;
-      const b = $('b', cell), e = $('em', cell);
-      if (b) {
-        b.textContent = big;
-        /* the lot cell is baked with class="sm" because its value is long.
-           assigning className wholesale used to drop that, so a live read
-           re-rendered the lot at full size and pushed it out of its cell. */
-        const small = b.classList.contains('sm') ? 'sm' : '';
-        b.className = [small, cls || ''].filter(Boolean).join(' ');
+    /* headline price */
+    if (ok(perLot) && perLot > 0) {
+      const main = $('#px-main');
+      if (main) main.innerHTML = nf(perLot, 5) + ' <i>zec</i>';
+      const bb = $('#bb-main');
+      if (bb) bb.textContent = nf(perLot, 5) + ' zec';
+      const u = $('#px-usd');
+      if (u) u.textContent = ok(zec) && zec > 0 ? usd(perLot * zec) : '';
+    }
+
+    if (ok(chg)) {
+      for (const el of [$('#px-chg'), $('#bb-chg')]) {
+        if (!el) continue;
+        el.textContent = signed(chg);
+        el.className = 'delta ' + (chg >= 0 ? 'up' : 'down');
       }
-      if (e && sub != null) e.textContent = sub;
+    }
+
+    /* the six tiles. A tile is only written when its number is real, so a
+       half-answer never produces a row of zeros. */
+    const money = (v, digits) =>
+      ok(v) ? nf(v, digits) + ' zec' + (ok(zec) && zec > 0 ? ' <span class="muted">' + usd(v * zec) + '</span>' : '') : null;
+
+    const tiles = {
+      mcap: money(d.mcapZec, 0),
+      liq: money(d.liqZec, 1),
+      vol: money(d.vol24Zec, 1),
+      positions: ok(Number(d.positions)) ? Number(d.positions).toLocaleString('en-us') : null,
+      rank: ok(Number(d.rank)) ? '#' + d.rank : null,
     };
+    for (const [k, v] of Object.entries(tiles)) if (v) setStat(k, v);
 
-    /* a usd figure is only meaningful when the zec price actually arrived */
-    const inUsd = (n) => (ok(zec) && zec > 0 && ok(n) ? usd(n * zec) : null);
-    const lotUsd = inUsd(lot);
-
-    set('mcap', d.mcapZec, nf(d.mcapZec, 0) + ' zec', inUsd(d.mcapZec));
-    set('lot',  lot,       nf(lot, 4) + ' zec', lotUsd === null ? null : lotUsd + ' per 12,500');
-    set('liq',  d.liqZec,  nf(d.liqZec, 1) + ' zec',  inUsd(d.liqZec));
-    set('vol',  d.vol24Zec, nf(d.vol24Zec, 1) + ' zec', inUsd(d.vol24Zec));
-    set('chg24', d.change24Pct, (d.change24Pct >= 0 ? '+' : '') + nf(d.change24Pct, 2) + '%',
-        'last 24 hours', d.change24Pct >= 0 ? 'up' : 'down');
-    set('chg7d', d.change7dPct, (d.change7dPct >= 0 ? '+' : '') + nf(d.change7dPct, 2) + '%',
-        'last 7 days', d.change7dPct >= 0 ? 'up' : 'down');
-    set('positions', d.positions, Number(d.positions).toLocaleString('en-us'), 'open on shld.fun');
-    set('rank', d.rank, '#' + d.rank, 'of every token there');
-
-    /* Every number on this panel has to say when it was read. An undated
-       market figure is a claim, not a reading, and CLAUDE.md treats that
-       difference as a legal matter rather than a stylistic one. The live
-       branch used to replace the timestamp with a block height and nothing
-       else, which quietly turned the whole tape into bare assertion. */
+    /* Timestamp and source. An undated market number is a claim, not a
+       reading, and CLAUDE.md treats that difference as a legal matter. */
     const state = $('#tape-state'), stamp = $('#tape-stamp');
     if (!state || !stamp || !meta) return;
     const live = meta.source === 'live';
     state.textContent = live ? 'live' : 'snapshot';
     state.classList.toggle('live', live);
-
     const when = readStamp(meta.takenAt);
-    if (!when) return;
-    stamp.textContent = live && ok(d.tipHeight)
-      ? when + ', tip block ' + Number(d.tipHeight).toLocaleString('en-us')
-      : when;
+    if (when) {
+      stamp.textContent = live && ok(Number(d.tipHeight))
+        ? when + ', tip block ' + Number(d.tipHeight).toLocaleString('en-us')
+        : when;
+    }
   }
 
-  async function tape() {
-    /* the html already holds the last known-good read, so this only ever upgrades it. */
-    /* Relative, not rooted. On Vercel the page sits at / so these resolve to
-       the same two paths as before, and on a plain static host that serves the
-       site from a subdirectory they still find their neighbours. */
+  async function market() {
     for (const url of ['api/tape', 'data/tape.json']) {
       try {
         const res = await getJSON(url);
         const d = res && res.data;
         if (d && ok(Number(d.mcapZec)) && Number(d.mcapZec) > 0) {
-          paintTape(d, { source: res.source, takenAt: res.takenAt });
+          paintMarket(d, { source: res.source, takenAt: res.takenAt });
           return;
         }
       } catch (_) { /* next */ }
     }
   }
 
-  /* -------------------------------------------------------------- the gallery */
+  /* ------------------------------------------------------------- the chart */
+
+  const TF = { '15m': 900, '1h': 3600, '4h': 14400, '1d': 86400 };
+
+  const C = {
+    gold: '#F0C558', gold3: '#D9A24A', stripe: '#C4761C',
+    ink: '#0A0705', panel: '#12100A', line: '#1C160D', line2: '#2A2010',
+    muted: '#9C7A3A', textHi: '#FFE9BE',
+  };
+
+  let chartState = null;   // { raw, chart, candles, volume, tf, unit }
+
+  /**
+   * shld.fun gives one price per block, not candles. Fold those into OHLC
+   * buckets of the requested width. Volume is ZEC moved, buy plus sell.
+   */
+  function toCandles(points, secondsPerBucket, anchorMs, anchorHeight, blockSec, rate) {
+    const out = [];
+    const vol = [];
+    let cur = null;
+
+    for (const [h, p, bv, sv] of points) {
+      const t = Math.floor((anchorMs + (h - anchorHeight) * blockSec * 1000) / 1000);
+      const bucket = Math.floor(t / secondsPerBucket) * secondsPerBucket;
+      const price = p * rate;
+
+      if (!cur || cur.time !== bucket) {
+        if (cur) { out.push(cur.c); vol.push(cur.v); }
+        cur = {
+          time: bucket,
+          c: { time: bucket, open: price, high: price, low: price, close: price },
+          v: { time: bucket, value: 0, color: C.gold3 },
+        };
+      }
+      cur.c.high = Math.max(cur.c.high, price);
+      cur.c.low = Math.min(cur.c.low, price);
+      cur.c.close = price;
+      cur.v.value += (bv + sv) * rate;
+      cur.v.color = cur.c.close >= cur.c.open ? C.gold3 : C.stripe;
+    }
+    if (cur) { out.push(cur.c); vol.push(cur.v); }
+    return { candles: out, volume: vol };
+  }
+
+  function redraw() {
+    const s = chartState;
+    if (!s) return;
+    const rate = s.unit === 'usd' && ok(s.raw.zecUsd) ? s.raw.zecUsd : 1;
+    const blockSec = ok(s.raw.measuredBlockSeconds) ? s.raw.measuredBlockSeconds : s.raw.blockSeconds || 75;
+    const anchorMs = Date.parse(s.raw.anchorTime);
+    const { candles, volume } = toCandles(
+      s.raw.points, TF[s.tf], anchorMs, s.raw.anchorHeight, blockSec, rate,
+    );
+    s.candles.applyOptions({
+      priceFormat: { type: 'price', precision: s.unit === 'usd' ? 2 : 5, minMove: s.unit === 'usd' ? 0.01 : 0.00001 },
+    });
+    s.candles.setData(candles);
+    s.volume.setData(volume);
+    s.chart.timeScale().fitContent();
+  }
+
+  function buildChart(raw) {
+    const host = $('#chart-canvas');
+    const msg = $('#chart-msg');
+    if (!host) return;
+
+    if (!window.LightweightCharts || !raw.points || raw.points.length < 2) {
+      if (msg) {
+        msg.hidden = false;
+        msg.textContent = !window.LightweightCharts
+          ? 'the chart library did not load. the numbers below still come straight off the chain.'
+          : 'no price history came back from the indexer. the coin page has the live chart.';
+      }
+      return;
+    }
+
+    const chart = window.LightweightCharts.createChart(host, {
+      layout: {
+        background: { color: C.panel },
+        textColor: C.muted,
+        fontFamily: '"IBM Plex Mono", ui-monospace, monospace',
+        fontSize: 11,
+      },
+      grid: { vertLines: { color: C.line }, horzLines: { color: C.line } },
+      rightPriceScale: { borderColor: C.line2 },
+      timeScale: { borderColor: C.line2, timeVisible: true, secondsVisible: false },
+      crosshair: {
+        mode: 0,
+        vertLine: { color: C.gold3, width: 1, style: 2, labelBackgroundColor: C.gold },
+        horzLine: { color: C.gold3, width: 1, style: 2, labelBackgroundColor: C.gold },
+      },
+      localization: { locale: 'en-us' },
+      handleScale: { axisPressedMouseMove: { time: true, price: false } },
+      autoSize: true,
+    });
+
+    const candles = chart.addCandlestickSeries({
+      upColor: C.gold, downColor: C.stripe,
+      borderUpColor: C.gold, borderDownColor: C.stripe,
+      wickUpColor: C.gold, wickDownColor: C.stripe,
+    });
+
+    const volume = chart.addHistogramSeries({
+      priceFormat: { type: 'volume' },
+      priceScaleId: 'vol',
+    });
+    chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+
+    chartState = { raw, chart, candles, volume, tf: '1h', unit: 'zec' };
+    redraw();
+    if (msg) msg.hidden = true;
+
+    /* the two segmented controls */
+    const wire = (sel, key, after) => {
+      const box = $(sel);
+      if (!box) return;
+      box.addEventListener('click', (e) => {
+        const b = e.target.closest('button');
+        if (!b) return;
+        $$('button', box).forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+        chartState[key] = b.dataset[key];
+        if (after) after();
+        redraw();
+      });
+    };
+    wire('#tf', 'tf');
+    wire('#unit', 'unit');
+  }
+
+  async function chart() {
+    const msg = $('#chart-msg');
+    for (const url of ['api/chart', 'data/chart.json']) {
+      try {
+        const raw = await getJSON(url);
+        if (raw && Array.isArray(raw.points) && raw.points.length > 1) {
+          buildChart(raw);
+          return;
+        }
+      } catch (_) { /* next */ }
+    }
+    if (msg) {
+      msg.hidden = false;
+      msg.textContent = 'the chain history is not reachable right now. the coin page on shld.fun has the live chart.';
+    }
+  }
+
+  /* --------------------------------------------------------- the buy bar */
+  /* The most important control on the page, so it follows. It stays out of
+     the way until the reader has passed the hero, where the big button is. */
+  function buybar() {
+    const bar = $('#buybar');
+    const hero = $('.hero');
+    if (!bar || !hero) return;
+
+    /* Deliberately a scroll position and not an IntersectionObserver. An
+       observer never delivers its first callback while the page is not being
+       painted — a background tab, a minimised window — and the bar would then
+       sit hidden through a whole session. A scroll offset is always readable. */
+    let edge = 0;
+    const measure = () => { edge = hero.offsetTop + hero.offsetHeight - 80; };
+
+    /* No requestAnimationFrame around this. rAF does not run while the page
+       is not being painted, and a reader who opens the tab in the background
+       and scrolls straight down would then never see the bar at all. The work
+       here is one number comparison, so throttling buys nothing anyway. */
+    const update = () => { bar.hidden = window.scrollY < edge; };
+
+    measure();
+    update();
+    addEventListener('scroll', update, { passive: true });
+    addEventListener('resize', () => { measure(); update(); }, { passive: true });
+  }
+
+  /* -------------------------------------------------------- the gallery */
   let visible = [];
 
   function collect() {
@@ -217,7 +392,7 @@
     });
   }
 
-  /* -------------------------------------------------------------- the lightbox */
+  /* ------------------------------------------------------- the lightbox */
   let idx = 0, lastFocus = null;
 
   function open(i) {
@@ -275,7 +450,58 @@
     });
   }
 
-  /* ------------------------------------------- append whatever D1 knows and html does not */
+  /* ---------------------------------------------------------- X embeds */
+  /* The real card from X, with the hand written one underneath as the floor.
+     platform.twitter.com is third party and does fail: it is blocked on some
+     networks, it is slow, and it does not run at all inside a strict CSP.
+     Whenever it does not finish, the static card is simply left alone, so
+     this section can never end up as a row of empty boxes. */
+  function xEmbeds() {
+    const cards = $$('#postgrid .post[data-tweet]');
+    if (!cards.length) return;
+
+    const s = document.createElement('script');
+    s.src = 'https://platform.twitter.com/widgets.js';
+    s.async = true;
+    s.charset = 'utf-8';
+
+    s.addEventListener('load', () => {
+      if (!window.twttr || !window.twttr.widgets) return;
+      for (const card of cards) {
+        const id = card.dataset.tweet;
+        if (!id) continue;
+        /* The host goes in EMPTY and stays in the flow. Two reasons.
+           One: widgets.js refuses to render into a container that is display
+           none, and its promise then never settles at all, so hiding the host
+           first meant nothing ever appeared. Two: '.xcard:empty' in the css
+           keeps an empty host invisible, so there is no timing to get right —
+           the moment X injects its iframe the card stops being empty and
+           shows itself. If X never answers, the host stays empty and unseen
+           and the hand written card below it is what the reader gets. */
+        const host = document.createElement('div');
+        host.className = 'xcard';
+        card.parentNode.insertBefore(host, card);
+
+        window.twttr.widgets
+          .createTweet(id, host, { theme: 'dark', dnt: true, conversation: 'none', align: 'center' })
+          .then((el) => {
+            /* createTweet resolves with undefined when the post is gone,
+               protected or simply would not render. Keep the floor.
+               Note there is no card.hidden here: widgets.js injects its
+               iframe well before this promise settles, and hiding the hand
+               written card from javascript left both versions on screen for
+               that whole gap. The css rule '.xcard:not(:empty) + .post' does
+               it on the same frame the iframe lands instead. */
+            if (!el) host.remove();
+          })
+          .catch(() => { host.remove(); });
+      }
+    });
+
+    document.head.appendChild(s);
+  }
+
+  /* ------------------------------------------- append whatever D1 knows */
 
   /* Rows here were typed by a human into a database, so a single apostrophe in
      a title used to be enough to break out of an attribute when these were
@@ -297,8 +523,6 @@
     try { res = await getJSON('api/memes'); } catch (_) { return; }
     const rows = (res && res.data) || [];
     const have = new Set($$('.gallery .tile').map((t) => t.dataset.slug));
-    /* a slug becomes a file path, so anything that is not a plain slug is
-       dropped rather than cleaned up and hoped for */
     const fresh = rows.filter((r) => r.slug && SLUG_OK.test(r.slug) && !have.has(r.slug));
     if (!fresh.length) return;
 
@@ -316,8 +540,6 @@
       img.src = 'thumb/' + r.slug + '.jpg';
       img.alt = r.alt || title;
       img.loading = 'lazy';
-      /* a row can land in D1 before its jpg lands on disk. drop the tile
-         rather than leave a broken frame that still counts in the total. */
       img.addEventListener('error', () => {
         fig.remove();
         const on = $('#filters button[aria-pressed="true"]');
@@ -368,7 +590,7 @@
     }
   }
 
-  /* ---------------------------------------------------------------------- copy */
+  /* ------------------------------------------------------------- copy */
   function copy() {
     $$('[data-copy]').forEach((btn) => {
       /* Captured once, before any click can change it. Reading the label
@@ -381,12 +603,11 @@
         try {
           await navigator.clipboard.writeText(text);
           btn.textContent = 'copied';
-          btn.dataset.done = '1';
         } catch (_) {
           btn.textContent = 'select it by hand';
         }
         clearTimeout(timer);
-        timer = setTimeout(() => { btn.textContent = label; delete btn.dataset.done; }, 1800);
+        timer = setTimeout(() => { btn.textContent = label; }, 1800);
       });
     });
   }
@@ -400,12 +621,15 @@
     open(visible.findIndex((v) => v.el === t));
   });
 
-  /* ------------------------------------------------------------------- start */
+  /* ----------------------------------------------------------- start */
   heartbeat();
   gallery();
   lightbox();
   copy();
-  tape();
+  buybar();
+  market();
+  chart();
+  xEmbeds();
   growGallery();
   growPosts();
 })();
