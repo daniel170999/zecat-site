@@ -166,6 +166,87 @@ Con so nuong san trong html la thu ma con bot va khach tat javascript nhin thay.
 
 ---
 
+## Khu quan tri: them meme thang tu trinh duyet
+
+Co mot khu quan tri an trong chinh trang chu. Khong co link, khong co duong
+dan rieng, khong co gi trong menu.
+
+**Cach vao:** nhan dup vao dong chu ky o chan trang, dong `The visor stays on.`
+
+### Noi thang mot dieu truoc khi dung
+
+Cu chi nhan dup **khong phai** la lop bao mat. No nam trong `assets/site.js`,
+ma file do ai cung tai duoc. Nguoi chiu doc ma nguon se tim ra trong mot phut.
+
+Cai thuc su giu cua la ba thu, va ca ba deu o phia may chu:
+
+| | |
+|---|---|
+| Mat khau | scrypt, N=32768. Mot lan thu mat khoang 100ms. Trong D1 chi co hash va salt, khong bao gio co mat khau. |
+| Gioi han | Sai 6 lan tu cung mot dia chi thi khoa 15 phut. |
+| The phien | Ky bang HMAC voi `ADMIN_SECRET`. Cookie HttpOnly, Secure, SameSite=Strict. |
+
+Thieu `ADMIN_SECRET` hoac thieu D1 thi toan bo khu quan tri **tu tat** va tra
+ve 503. Dong cua khi hong, khong mo cua khi hong.
+
+### Dat mat khau
+
+```bash
+node tools/set-password.mjs
+```
+
+Lenh nay doc mat khau tu ban phim, **khong hien len man hinh**, khong vao lich
+su shell, va khong ghi ra file nao. No in ra mot cau lenh `wrangler` chua
+scrypt hash. Trong cau lenh do khong co mat khau, nen dan no di dau cung khong sao.
+
+Chay cau lenh no in ra, roi dat bien moi truong tren Vercel:
+
+| Bien | La gi |
+|---|---|
+| `ADMIN_SECRET` | Khoa ky the phien. Lenh tren co sinh san mot cai. **Doi khoa nay la da tat ca moi nguoi ra ngoai ngay lap tuc** — do la cach nhanh nhat de dong cua neu co chuyen. |
+| `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID`, `CF_API_TOKEN` | Nhu muc D1 o tren. Token phai co quyen **ghi**, vi upload ghi vao database. |
+
+Them bien xong phai **redeploy** thi function moi doc duoc.
+
+### Doi mat khau sau nay
+
+Vao khu quan tri, tab **Change password**. Doi xong thi moi phien dang mo tren
+may khac chet ngay lap tuc, vi `token_version` tang len va the cu het gia tri.
+
+Quen mat khau thi khong co duong khoi phuc nao qua trinh duyet: chay lai
+`node tools/set-password.mjs` tren may va nap lai SQL.
+
+### Them mot meme qua khu quan tri
+
+Keo mot tam anh vao. **Trinh duyet tu thu nho** thanh hai ban, 1400px va
+600px, roi nen lai JPEG. Nho vay may chu khong can thu vien xu ly anh nao, va
+thu di qua mang chi con vai chuc KB.
+
+Phai dien mo ta cho nguoi khong nhin thay anh. Do khong phai o tuy chon: thieu
+no thi upload bi tu choi.
+
+Anh upload duoc luu **trong D1** dang base64 va phuc vu qua `/api/meme-image`.
+Anh nam trong repo van chay duong cu. Tuong anh doc duoc ca hai, va `stored`
+trong bang `memes` la thu phan biet.
+
+Khong can deploy lai. Tuong anh tu keo ve ngay sau khi them.
+
+### Chay lai bai kiem tra sau moi lan sua
+
+```bash
+node tools/test-admin.mjs
+```
+
+41 phep thu, khong can mang, khong can Cloudflare: no dung mot D1 gia chay tren
+sqlite trong bo nho va goi thang cac handler. Can `npm i -g better-sqlite3`
+mot lan.
+
+Doan ma xac thuc la cho duy nhat trong du an ma mot loi im lang co the mo cua
+cho nguoi la, va mat thuong khong nhin ra duoc. Sua `api/_auth.js` hay
+`api/admin.js` xong ma chua chay lai bai nay thi dung push.
+
+---
+
 ## Them mot meme moi
 
 1. Bo hai file jpg **cung ten**:

@@ -78,6 +78,9 @@ function shape(row) {
     credit: str(r.credit),
     featured: bool(r.featured),
     sort: num(r.sort),
+    /* 1 = anh nam trong D1, phuc vu boi /api/meme-image.
+       0 = anh nam trong repo tai public/meme/<slug>.jpg */
+    stored: bool(r.stored),
   };
 }
 
@@ -167,7 +170,7 @@ async function loadD1(tag) {
   const where = tag ? ' WHERE lower(tag) = lower(?)' : '';
   const params = tag ? [tag] : [];
   const sql =
-    'SELECT id, slug, title, alt, tag, credit, featured, sort FROM memes' +
+    'SELECT id, slug, title, alt, tag, credit, featured, sort, stored FROM memes' +
     where +
     ' ORDER BY sort ASC, id ASC';
   const rows = await d1Query(sql, params);

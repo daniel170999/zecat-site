@@ -57,6 +57,31 @@ function vercelShim(res) {
   return res;
 }
 
+/**
+ * Doc than yeu cau va phan tich JSON, y het cach Vercel lam truoc khi goi
+ * handler. Than rong hoac khong phai JSON thi tra ve undefined, dung nhu
+ * Vercel, de handler tu quyet dinh do la loi hay khong.
+ */
+function readJsonBody(request) {
+  const method = (request.method || 'GET').toUpperCase();
+  if (method === 'GET' || method === 'HEAD') return Promise.resolve(undefined);
+  return new Promise((resolve) => {
+    let raw = '';
+    request.on('data', (c) => {
+      raw += c;
+      /* tran an toan, xap xi gioi han than yeu cau cua Vercel */
+      if (raw.length > 5 * 1024 * 1024) { raw = ''; request.destroy(); resolve(undefined); }
+    });
+    request.on('end', () => {
+      if (!raw) return resolve(undefined);
+      const type = String(request.headers['content-type'] || '');
+      if (!type.includes('application/json')) return resolve(raw);
+      try { resolve(JSON.parse(raw)); } catch { resolve(undefined); }
+    });
+    request.on('error', () => resolve(undefined));
+  });
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url || '/', 'http://localhost');
   let path = decodeURIComponent(url.pathname);
@@ -72,6 +97,10 @@ const server = createServer(async (req, res) => {
       /* them query moi lan de sua file xong khong phai khoi dong lai */
       const mod = await import(pathToFileURL(join(apiDir, name + '.js')).href + '?t=' + Date.now());
       req.query = Object.fromEntries(url.searchParams.entries());
+      /* Vercel tu doc than JSON thanh request.body truoc khi goi handler.
+         Khong lam viec do o day thi moi route POST se thay than rong va tra
+         ve "Bad request", trong khi tren that no chay binh thuong. */
+      req.body = await readJsonBody(req);
       await mod.default(req, vercelShim(res));
     } catch (err) {
       res.statusCode = 500;

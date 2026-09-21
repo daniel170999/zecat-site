@@ -435,7 +435,7 @@
     idx = i;
     const m = visible[i];
     const img = $('#lb-img');
-    img.src = 'meme/' + m.slug + '.jpg';
+    img.src = m.el.dataset.full || ('meme/' + m.slug + '.jpg');
     img.alt = m.el.dataset.alt || m.title;
     $('#lb-cap').textContent = m.title;
     box.hidden = false;
@@ -566,8 +566,15 @@
       fig.dataset.tag = r.tag || 'scene';
       fig.dataset.alt = r.alt || title;
 
+      /* Hai duong nguon anh. Anh cu nam trong repo; anh upload qua khu
+         quan tri nam trong D1 va di qua /api/meme-image. Lightbox doc
+         data-full, nen no khong can biet anh den tu dau. */
+      const inDb = Boolean(r.stored);
+      const q = 'slug=' + encodeURIComponent(r.slug);
+      fig.dataset.full = inDb ? 'api/meme-image?' + q + '&v=full' : 'meme/' + r.slug + '.jpg';
+
       const img = el('img');
-      img.src = 'thumb/' + r.slug + '.jpg';
+      img.src = inDb ? 'api/meme-image?' + q + '&v=thumb' : 'thumb/' + r.slug + '.jpg';
       img.alt = r.alt || title;
       img.loading = 'lazy';
       img.addEventListener('error', () => {
@@ -642,6 +649,42 @@
     });
   }
 
+  /* ---------------------------------------------------------- admin door */
+  /* Mot cu nhan dup vao dong ky ten o chan trang. Khong co link, khong co
+     nut, khong co duong dan rieng de ai do do ra.
+
+     Cho ro rang: day KHONG phai bao mat. Doan ma nay cong khai nhu moi thu
+     khac trong file, nen ai chiu doc se thay. Thu that su chan nguoi la la
+     mat khau kiem tra o server cung voi gioi han so lan thu. Giau cua chi de
+     bot va nguoi to mo khong bao gio go den. */
+  function adminDoor() {
+    const mark = $('footer .sign');
+    if (!mark) return;
+    mark.addEventListener('dblclick', () => {
+      if (window.__zecatAdmin) { window.__zecatAdmin.open(); return; }
+      const s = document.createElement('script');
+      s.src = 'assets/admin.js';
+      s.defer = true;
+      document.head.appendChild(s);
+    });
+  }
+
+  /* Them anh xong thi keo lai tuong, khong phai tai lai trang.
+
+     Co thu lai vai lan chu khong goi dung mot lan. Hang vua ghi vao D1 khong
+     phai luc nao cung doc lai duoc ngay o lan hoi ke tiep, va khi do tuong
+     van dung yen trong khi khu quan tri da bao "xong". Vong lap nay dung
+     ngay khi thay slug moi xuat hien. */
+  document.addEventListener('zecat:memes-changed', async (e) => {
+    const want = e.detail && e.detail.slug;
+    const here = () => !want || $$('.gallery .tile').some((t) => t.dataset.slug === want);
+    for (let i = 0; i < 5; i++) {
+      await growGallery();
+      if (here()) return;
+      await new Promise((r) => setTimeout(r, 600));
+    }
+  });
+
   /* keyboard support for the figure-as-button tiles */
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -662,4 +705,5 @@
   xEmbeds();
   growGallery();
   growPosts();
+  adminDoor();
 })();
