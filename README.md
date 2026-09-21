@@ -84,11 +84,17 @@ Roi tren Vercel:
 4. **Build Command**: de trong. **Output Directory**: `public`. **Install Command**: de trong.
 5. Deploy. Nhung lan sau chi can push len `main`.
 
-Ten mien production da dat san la `https://zecatzcash.vercel.app`. Neu Vercel cap dia chi khac, xem muc duoi.
+Ten mien production duoc ghi trong ma nguon o dung mot cho, va do `tools/sync-data.mjs --origin` viet ra. Dung sua tay. Xem muc duoi.
 
 ### Doi ten mien
 
-Ten mien hien tai da duoc dat san trong ma nguon: `https://zecatzcash.vercel.app`. Chi chay lenh duoi khi dia chi that KHAC cai do, hoac khi mua duoc ten mien rieng:
+Ten mien hien tai nam trong `public/index.html`, `public/sitemap.xml` va `public/robots.txt`. Muon biet no dang la gi:
+
+```bash
+grep -o 'href="https://[^/]*' public/index.html | head -1
+```
+
+Doi sang ten mien khac, chay MOT lenh:
 
 ```bash
 node tools/sync-data.mjs --origin https://ten-mien-moi
