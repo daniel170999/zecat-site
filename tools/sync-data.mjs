@@ -121,6 +121,55 @@ await mkdir(dataDir, { recursive: true });
 await writeFile(join(dataDir, 'memes.json'), JSON.stringify(memes, null, 2) + '\n');
 await writeFile(join(dataDir, 'posts.json'), JSON.stringify(posts, null, 2) + '\n');
 
+/* ------------------------------------------------------------- db/seed.sql
+
+   Sinh seed.sql TU chinh hai file json vua ghi, thay vi de no la mot ban
+   chep tay.
+
+   Vi sao: ban viet tay da lech that. No chua mot phien ban DA DUOC VIET LAI
+   cua bai dang ghim — "crime: being the first token ever launched on
+   @SHLDdotfun" — trong khi bai that tren X viet "crime: becoming the first
+   meme coin on Zcash". Nap D1 bang file do la site hien mot ban bia cua mot
+   bai dang co that, ngay ben canh link tro ve bai goc de ai cung doi chieu
+   duoc.
+
+   Bang admin KHONG bao gio duoc sinh o day. Khong co mat khau, khong co
+   hash, khong co salt trong seed. Dat mat khau bang tools/set-password.mjs. */
+
+{
+  const q = (v) => (v === null || v === undefined ? 'NULL' : "'" + String(v).split("'").join("''") + "'");
+  const n = (v) => (v === null || v === undefined || v === '' ? 'NULL' : Number(v));
+
+  const lines = [
+    '-- SINH TU DONG boi tools/sync-data.mjs. Dung sua tay.',
+    '-- Nguon that la public/index.html; hai file public/data/*.json nam giua.',
+    '--',
+    '-- Ap dung (chay tu thu muc site/):',
+    '--   npx wrangler d1 execute zecat --remote --file=./db/schema.sql',
+    '--   npx wrangler d1 execute zecat --remote --file=./db/seed.sql',
+    '--',
+    '-- Than bai dang la BAN LUU cua nhung gi da dang tren X. Giu nguyen van,',
+    '-- ke ca chu thuong. Sua chu trong do la lam sai ban luu.',
+    '--',
+    '-- O day khong co mat khau. Bang admin duoc dat bang tools/set-password.mjs.',
+    '',
+    'INSERT OR IGNORE INTO memes (id, slug, title, alt, tag, credit, featured, sort, stored) VALUES',
+    memes.map((m) => '  (' + [
+      m.id, q(m.slug), q(m.title), q(m.alt), q(m.tag), q(m.credit),
+      m.featured ? 1 : 0, m.sort, 0,
+    ].join(', ') + ')').join(',\n') + ';',
+    '',
+    'INSERT OR IGNORE INTO posts (id, posted_at, body, views, url, pinned) VALUES',
+    posts.map((p) => '  (' + [
+      p.id, q(p.posted_at), q(p.body), q(p.views), q(p.url), p.pinned ? 1 : 0,
+    ].join(', ') + ')').join(',\n') + ';',
+    '',
+  ];
+
+  await writeFile(join(root, 'db', 'seed.sql'), lines.join('\n'));
+  console.log('sync-data: sinh lai db/seed.sql tu cung nguon');
+}
+
 console.log('sync-data: wrote ' + memes.length + ' memes and ' + posts.length + ' posts to public/data/');
 console.log('  tags: ' + [...new Set(memes.map((m) => m.tag))].join(', '));
 

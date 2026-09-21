@@ -50,10 +50,11 @@ function askHidden(prompt) {
 
     const onData = (chunk) => {
       for (const ch of chunk) {
-        if (ch === '\r' || ch === '\n') return done(null, value);
-        if (ch === '') return done(new Error('da huy'));          // ctrl-c
-        if (ch === '' || ch === '\b') { value = value.slice(0, -1); continue; }
-        if (ch < ' ') continue;                                          // bo ky tu dieu khien
+        const code = ch.charCodeAt(0);
+        if (code === 13 || code === 10) return done(null, value);          // enter
+        if (code === 3) return done(new Error('da huy'));                  // ctrl-c
+        if (code === 127 || code === 8) { value = value.slice(0, -1); continue; }  // xoa lui
+        if (code < 32) continue;                                            // bo ky tu dieu khien
         value += ch;
       }
     };
@@ -128,11 +129,15 @@ console.log('');
 
 /* Chi goi y khoa ky khi no chua duoc dat. Lenh nay khong doc duoc bien moi
    truong tren Vercel, nen day chi la loi nhac. */
-console.log('  Con mot bien moi truong nua phai co tren Vercel, dat MOT lan:');
+console.log('  CHI khi chua tung dat: con mot bien moi truong nua tren Vercel.');
+console.log('  Day la mot khoa MOI duoc sinh ra ngay bay gio. Neu tren Vercel da co');
+console.log('  ADMIN_SECRET roi thi BO QUA dong duoi, vi thay no se da moi nguoi');
+console.log('  dang dang nhap ra ngoai.');
 console.log('');
 console.log('    ADMIN_SECRET = ' + crypto.randomBytes(32).toString('base64url'));
 console.log('');
-console.log('  Do la khoa dung de ky the phien. Thieu no thi ca khu quan tri tu tat.');
-console.log('  Doi khoa nay se da moi nguoi dang dang nhap ra ngoai, va do la cach');
-console.log('  nhanh nhat de dong cua neu co chuyen gi.');
+console.log('  Khoa nay dung de ky the phien. Thieu no thi ca khu quan tri tu tat.');
+console.log('  Doi no la cach nhanh nhat de dong cua neu co chuyen gi xay ra.');
+console.log('  No vua duoc in ra man hinh nay, nen dung dan no vao cho nao khac');
+console.log('  ngoai o bien moi truong cua Vercel.');
 console.log('');
