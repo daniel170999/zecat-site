@@ -10,7 +10,7 @@
      - the price header and the six stat tiles
      - the candlestick chart, built from one pull of the whole chain history
      - the cursor driven tilt on the hero coin
-     - gallery filtering and the lightbox
+     - the meme wall and its lightbox
      - real X embeds, with the static cards left in place when they fail
      - appending memes and posts that exist in D1 but are not baked in yet
 
@@ -374,48 +374,19 @@
   /* -------------------------------------------------------- the gallery */
   let visible = [];
 
+  /* Buc tuong la mot buc tuong anh, khong phai mot danh sach the co ten.
+     Khong con bo loc, khong con chu duoi moi tam. Cai duy nhat con lai la
+     data-alt, vi nguoi dung trinh doc man hinh van phai biet trong anh co gi. */
   function collect() {
-    visible = $$('.gallery .tile').map((el) => ({
-      el,
-      slug: el.dataset.slug,
-      title: el.dataset.title || '',
-      tag: el.dataset.tag || 'scene',
-    }));
-  }
-
-  function applyFilter(tag) {
-    const vid = $('.gallery .vidcard');
-    if (vid) vid.hidden = !(tag === 'all' || tag === 'video');
-    $$('.gallery .tile').forEach((el) => {
-      el.hidden = !(tag === 'all' || el.dataset.tag === tag);
-    });
-    collect();
-    visible = visible.filter((v) => !v.el.hidden);
+    visible = $$('.gallery .tile').map((el) => ({ el, slug: el.dataset.slug }));
     const foot = $('#gallery-count');
-    if (foot) {
-      const n = visible.length;
-      foot.textContent = n + (n === 1 ? ' image' : ' images') +
-        (tag === 'all' ? ' on the wall' : ' tagged ' + tag);
-      /* starts with a digit, so there is no first letter to capitalise */
-    }
+    if (foot) foot.textContent = visible.length + (visible.length === 1 ? ' image' : ' images');
   }
 
   function gallery() {
     const wall = $('.gallery');
     if (!wall) return;
     collect();
-    applyFilter('all');
-
-    const filters = $('#filters');
-    if (filters) {
-      filters.addEventListener('click', (e) => {
-        const b = e.target.closest('button');
-        if (!b) return;
-        $$('button', filters).forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-        applyFilter(b.dataset.tag);
-      });
-    }
-
     wall.addEventListener('click', (e) => {
       const t = e.target.closest('.tile');
       if (t) open(visible.findIndex((v) => v.el === t));
@@ -436,8 +407,7 @@
     const m = visible[i];
     const img = $('#lb-img');
     img.src = m.el.dataset.full || ('meme/' + m.slug + '.jpg');
-    img.alt = m.el.dataset.alt || m.title;
-    $('#lb-cap').textContent = m.title;
+    img.alt = m.el.dataset.alt || '';
     box.hidden = false;
     document.body.style.overflow = 'hidden';
     $('#lb-close').focus();
@@ -557,14 +527,15 @@
     if (!fresh.length) return;
 
     for (const r of fresh) {
-      const title = r.title || r.slug;
       const fig = el('figure', 'tile');
       fig.setAttribute('role', 'button');
       fig.tabIndex = 0;
       fig.dataset.slug = r.slug;
-      fig.dataset.title = title;
+      /* van giu title va tag trong data-*: tools/sync-data.mjs doc chung, va
+         chung la thu ma D1 luu. Chi la khong hien ra man hinh nua. */
+      fig.dataset.title = r.title || r.slug;
       fig.dataset.tag = r.tag || 'scene';
-      fig.dataset.alt = r.alt || title;
+      fig.dataset.alt = r.alt || '';
 
       /* Hai duong nguon anh. Anh cu nam trong repo; anh upload qua khu
          quan tri nam trong D1 va di qua /api/meme-image. Lightbox doc
@@ -575,21 +546,16 @@
 
       const img = el('img');
       img.src = inDb ? 'api/meme-image?' + q + '&v=thumb' : 'thumb/' + r.slug + '.jpg';
-      img.alt = r.alt || title;
+      img.alt = r.alt || '';
       img.loading = 'lazy';
-      img.addEventListener('error', () => {
-        fig.remove();
-        const on = $('#filters button[aria-pressed="true"]');
-        applyFilter(on ? on.dataset.tag : 'all');
-      });
+      /* Mot hang co the vao D1 truoc khi anh kip len. Go the ra thay vi de
+         lai mot khung vo. */
+      img.addEventListener('error', () => { fig.remove(); collect(); });
 
-      const cap = el('figcaption');
-      cap.append(el('span', null, title), el('i', null, r.tag || ''));
-      fig.append(img, cap);
+      fig.append(img);
       wall.appendChild(fig);
     }
-    const on = $('#filters button[aria-pressed="true"]');
-    applyFilter(on ? on.dataset.tag : 'all');
+    collect();
   }
 
   async function growPosts() {

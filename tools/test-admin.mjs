@@ -237,8 +237,17 @@ const NOT_JPEG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47]), Buffer.al
   check('slug ban bi tu choi', r.status === 400);
 }
 {
-  const r = await post({ action: 'upload', slug: 'no-alt', title: 'Title', alt: 'short', thumb: JPEG, full: JPEG, w: 10, h: 10 });
-  check('alt qua ngan bi tu choi', r.status === 400);
+  /* Mo ta la tuy chon tu khi khu quan tri cho tha nhieu anh mot luc. De
+     trong thi de trong that, khong bia ra mot cau mo ta gia. */
+  const r = await post({ action: 'upload', slug: 'no-alt', alt: '', thumb: JPEG, full: JPEG, w: 10, h: 10 });
+  check('alt de trong van upload duoc', r.status === 200, JSON.stringify(r.json));
+  const row = db.prepare('SELECT alt, title FROM memes WHERE slug=?').get('no-alt');
+  check('alt luu thanh chuoi rong chu khong phai chu bia', row && row.alt === '', JSON.stringify(row));
+  check('title tu suy ra tu ten file', row && row.title === 'No alt', JSON.stringify(row));
+}
+{
+  const r = await post({ action: 'upload', slug: 'long-alt', alt: 'a'.repeat(400), thumb: JPEG, full: JPEG, w: 10, h: 10 });
+  check('alt qua dai bi tu choi', r.status === 400);
 }
 {
   const r = await post({ action: 'upload', slug: 'fake-png', title: 'Title', alt: 'a'.repeat(20), thumb: NOT_JPEG, full: NOT_JPEG, w: 10, h: 10 });
@@ -258,8 +267,16 @@ const NOT_JPEG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47]), Buffer.al
   check('hai ban anh duoc ghi', blobs.length === 2, JSON.stringify(blobs));
 }
 {
-  const r = await post({ action: 'upload', slug: 'test-meme', title: 'Again', alt: 'A description long enough', thumb: JPEG, full: JPEG, w: 10, h: 10 });
-  check('trung slug bi tu choi 409', r.status === 409);
+  /* Tha mot loat anh thi ten file trung nhau la chuyen binh thuong, nen may
+     chu tu them so thay vi bat nguoi dung doi ten tung tam. */
+  const r = await post({ action: 'upload', slug: 'test-meme', alt: '', thumb: JPEG, full: JPEG, w: 10, h: 10 });
+  check('slug trung thi tu doi ten', r.status === 200 && r.json.slug === 'test-meme-2',
+    JSON.stringify(r.json));
+  const r2 = await post({ action: 'upload', slug: 'test-meme', alt: '', thumb: JPEG, full: JPEG, w: 10, h: 10 });
+  check('lan thu ba thanh -3', r2.status === 200 && r2.json.slug === 'test-meme-3',
+    JSON.stringify(r2.json));
+  const all = db.prepare("SELECT COUNT(*) n FROM memes WHERE slug LIKE 'test-meme%'").get();
+  check('ba hang rieng biet trong D1', all.n === 3, JSON.stringify(all));
 }
 
 console.log('\n=== PHUC VU ANH ===');
@@ -332,6 +349,8 @@ console.log('\n=== GO MEME ===');
   check('khong go duoc anh nam trong repo', r.status === 400, JSON.stringify(r.json));
   const r2 = await post({ action: 'remove', slug: 'test-meme' });
   check('go duoc anh da upload', r2.status === 200, JSON.stringify(r2.json));
+  const other = db.prepare("SELECT COUNT(*) n FROM memes WHERE slug IN ('test-meme-2','test-meme-3')").get();
+  check('go mot tam khong dung den nhung tam da doi ten', other.n === 2, JSON.stringify(other));
   const left = db.prepare('SELECT COUNT(*) n FROM meme_blobs WHERE slug=?').get('test-meme');
   check('byte anh cung bi xoa theo', left.n === 0);
 }

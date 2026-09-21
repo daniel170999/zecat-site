@@ -14,6 +14,10 @@
    Anh duoc thu nho NGAY TRONG TRINH DUYET truoc khi gui: mot ban 1400px va
    mot ban 600px. Nho vay may chu khong can thu vien xu ly anh nao, va thu di
    qua mang chi con vai chuc KB thay vi vai MB.
+
+   Tha bao nhieu tam mot luc cung duoc. Khong phai dat ten, khong phai go
+   tieu de: ten file thanh slug, slug trung thi may chu tu them so. O mo ta
+   la tuy chon, de trong thi de trong that chu khong bia ra mot cau gia.
    =========================================================================== */
 
 (() => {
@@ -60,9 +64,17 @@
 .adm-msg.good{border-left-color:#F0C558;color:#FFE9BE}
 .adm-drop{border:1px dashed #2A2010;padding:20px;text-align:center;font-size:13px;color:#9C7A3A;cursor:pointer}
 .adm-drop:hover,.adm-drop.over{border-color:#F0C558;color:#F0C558}
-.adm-prev{display:flex;gap:12px;align-items:center}
-.adm-prev img{width:76px;height:76px;object-fit:cover;border:1px solid #2A2010}
-.adm-prev span{font-size:12px;color:#9C7A3A;line-height:1.6}
+.adm-queue{list-style:none;margin:0;padding:0;display:grid;gap:8px;max-height:46vh;overflow:auto}
+.adm-queue li{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center;
+  border:1px solid #2A2010;padding:8px;background:#0A0705}
+.adm-queue img{width:52px;height:52px;object-fit:cover;background:#16120B}
+.adm-queue .q-mid{min-width:0}
+.adm-queue .q-name{font-size:11px;color:#9C7A3A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm-queue input{width:100%;margin-top:4px;background:#0F0C07;border:1px solid #2A2010;
+  color:#FFE9BE;font:inherit;font-size:12px;padding:5px 8px}
+.adm-queue .q-state{font-size:11px;color:#9C7A3A;white-space:nowrap;text-align:right}
+.adm-queue .q-state.ok{color:#F0C558}
+.adm-queue .q-state.bad{color:#C4614A}
 .adm-tabs{display:flex;border-bottom:1px solid #2A2010}
 .adm-tabs button{flex:1;background:none;border:none;border-bottom:2px solid transparent;
   color:#9C7A3A;font:inherit;font-size:12px;padding:11px 8px;cursor:pointer}
@@ -94,15 +106,14 @@
       <button type="button" data-tab="pw" aria-selected="false">Change password</button>
     </div>
     <div class="adm-body" data-pane="up">
-      <div class="adm-drop" data-drop>Drop an image here, or click to pick one</div>
-      <input type="file" accept="image/*" hidden data-file>
-      <div class="adm-prev" hidden data-prev><img alt=""><span data-prev-txt></span></div>
-      <div><label for="adm-title">Title</label><input id="adm-title" type="text" maxlength="80"></div>
-      <div><label for="adm-slug">File name, lowercase and dashes</label><input id="adm-slug" type="text" maxlength="48" spellcheck="false"></div>
-      <div><label for="adm-alt">Describe it for people who cannot see it</label><textarea id="adm-alt" maxlength="300"></textarea></div>
-      <div><label for="adm-tag">Kind</label><select id="adm-tag"><option value="scene">Scene</option><option value="poster">Poster</option></select></div>
-      <div class="adm-row"><button class="adm-btn" type="button" data-send disabled>Add to the wall</button>
-        <button class="adm-btn adm-ghost" type="button" data-out>Sign out</button></div>
+      <div class="adm-drop" data-drop>Drop images here, or click to pick. Several at once is fine.</div>
+      <input type="file" accept="image/*" multiple hidden data-file>
+      <ul class="adm-queue" data-queue></ul>
+      <div class="adm-row">
+        <button class="adm-btn" type="button" data-send disabled>Upload</button>
+        <button class="adm-btn adm-ghost" type="button" data-clear hidden>Clear</button>
+        <button class="adm-btn adm-ghost" type="button" data-out>Sign out</button>
+      </div>
       <p class="adm-msg" data-msg hidden></p>
     </div>
     <div class="adm-body" data-pane="pw" hidden>
@@ -121,7 +132,9 @@
   const panel = $('[data-panel]', root);
   const msg = $('[data-msg]', root);
   let lastFocus = null;
-  let shots = null;   // { full, thumb, w, h }
+  /* Hang doi anh dang cho gui. Moi phan tu:
+     { file, slug, full, thumb, row, desc, state } */
+  let queue = [];
 
   /* ------------------------------------------------------------- helpers */
   const say = (el, text, kind) => {
@@ -169,28 +182,60 @@
   const slugify = (s) => s.toLowerCase().normalize('NFKD')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48);
 
-  async function take(file) {
-    if (!file || !/^image\//.test(file.type)) {
-      say(msg, 'That is not an image.', 'bad'); return;
-    }
-    say(msg, 'Resizing.', '');
-    try {
-      const full = await shrink(file, FULL_EDGE);
-      const thumb = await shrink(file, THUMB_EDGE);
-      shots = { full, thumb };
-      const prev = $('[data-prev]', root);
-      $('img', prev).src = 'data:image/jpeg;base64,' + thumb.b64;
-      $('[data-prev-txt]', root).textContent =
-        full.w + ' by ' + full.h + ', ' + Math.round(full.bytes / 1024) + ' KB. ' +
-        'Thumbnail ' + Math.round(thumb.bytes / 1024) + ' KB.';
-      prev.hidden = false;
-      $('[data-send]', root).disabled = false;
-      const slugField = $('#adm-slug', root);
-      if (!slugField.value) slugField.value = slugify(file.name.replace(/\.[a-z0-9]+$/i, ''));
-      say(msg, 'Ready.', 'good');
-    } catch (err) {
-      shots = null;
-      say(msg, err.message || 'Could not read that image.', 'bad');
+  function refreshButtons() {
+    const ready = queue.filter((q) => q.state === 'ready').length;
+    const send = $('[data-send]', root);
+    send.disabled = ready === 0;
+    send.textContent = ready === 0 ? 'Upload' : 'Upload ' + ready + (ready === 1 ? ' image' : ' images');
+    $('[data-clear]', root).hidden = queue.length === 0;
+  }
+
+  /**
+   * Nhan mot loat file va xep vao hang doi. Moi tam duoc thu nho ngay trong
+   * trinh duyet thanh hai ban truoc khi gui, nen mot lan tha hai muoi tam
+   * van chi la vai tram KB len duong truyen.
+   *
+   * Tung tam xu ly lan luot chu khong song song: hai muoi canvas cung luc
+   * lam treo tab tren may yeu.
+   */
+  async function enqueue(files) {
+    const list = [...files].filter((f) => f && /^image\//.test(f.type));
+    if (!list.length) { say(msg, 'Those were not images.', 'bad'); return; }
+    msg.hidden = true;
+
+    for (const file of list) {
+      const item = {
+        file,
+        slug: slugify(file.name.replace(/\.[a-z0-9]+$/i, '')) || 'meme',
+        state: 'sizing',
+      };
+      const li = document.createElement('li');
+      li.innerHTML =
+        '<img alt="">' +
+        '<span class="q-mid"><span class="q-name"></span>' +
+        '<input type="text" maxlength="300" placeholder="Describe it for people who cannot see it (optional)"></span>' +
+        '<span class="q-state">resizing</span>';
+      $('.q-name', li).textContent = file.name;
+      item.row = li;
+      item.desc = $('input', li);
+      item.stateEl = $('.q-state', li);
+      $('[data-queue]', root).appendChild(li);
+      queue.push(item);
+      refreshButtons();
+
+      try {
+        item.full = await shrink(file, FULL_EDGE);
+        item.thumb = await shrink(file, THUMB_EDGE);
+        $('img', li).src = 'data:image/jpeg;base64,' + item.thumb.b64;
+        item.state = 'ready';
+        item.stateEl.textContent = Math.round(item.full.bytes / 1024) + ' KB';
+        item.stateEl.className = 'q-state';
+      } catch (err) {
+        item.state = 'failed';
+        item.stateEl.textContent = 'cannot read';
+        item.stateEl.className = 'q-state bad';
+      }
+      refreshButtons();
     }
   }
 
@@ -200,7 +245,7 @@
     root.hidden = false;
     document.body.style.overflow = 'hidden';
     call('session').then((s) => {
-      if (s.signedIn) { gate.hidden = true; panel.hidden = false; $('#adm-title', root).focus(); }
+      if (s.signedIn) { gate.hidden = true; panel.hidden = false; $('[data-drop]', root).focus(); }
       else { gate.hidden = false; panel.hidden = true; $('#adm-pw', root).focus(); }
     }).catch(() => {
       say($('[data-gate-msg]', root),
@@ -230,7 +275,7 @@
       await call('login', { password: field.value });
       field.value = '';
       gate.hidden = true; panel.hidden = false;
-      $('#adm-title', root).focus();
+      $('[data-drop]', root).focus();
     } catch (err) {
       say(gm, err.message, 'bad');
       field.select();
@@ -257,41 +302,68 @@
   const drop = $('[data-drop]', root);
   const fileInput = $('[data-file]', root);
   drop.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', () => take(fileInput.files && fileInput.files[0]));
+  fileInput.addEventListener('change', () => { enqueue(fileInput.files || []); fileInput.value = ''; });
   drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
   drop.addEventListener('dragleave', () => drop.classList.remove('over'));
   drop.addEventListener('drop', (e) => {
     e.preventDefault(); drop.classList.remove('over');
-    take(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
+    enqueue((e.dataTransfer && e.dataTransfer.files) || []);
   });
 
+  $('[data-clear]', root).addEventListener('click', () => {
+    queue = [];
+    $('[data-queue]', root).replaceChildren();
+    msg.hidden = true;
+    refreshButtons();
+  });
+
+  /* Gui lan luot chu khong song song. May chu ghi vao D1 tung hang mot va
+     tu doi ten khi slug trung, nen thu tu tuan tu giu cho viec doi ten do
+     doan duoc. Mot tam hong khong lam dung ca hang doi. */
   $('[data-send]', root).addEventListener('click', async () => {
-    if (!shots) return;
     const btn = $('[data-send]', root);
+    const todo = queue.filter((q) => q.state === 'ready');
+    if (!todo.length) return;
     btn.disabled = true;
-    say(msg, 'Sending.', '');
-    try {
-      const out = await call('upload', {
-        slug: slugify($('#adm-slug', root).value),
-        title: $('#adm-title', root).value.trim(),
-        alt: $('#adm-alt', root).value.trim(),
-        tag: $('#adm-tag', root).value,
-        thumb: shots.thumb.b64,
-        full: shots.full.b64,
-        w: shots.full.w,
-        h: shots.full.h,
-      });
-      say(msg, 'Added as ' + out.slug + '. It is on the wall now.', 'good');
-      shots = null;
-      $('[data-prev]', root).hidden = true;
-      for (const id of ['#adm-title', '#adm-slug', '#adm-alt']) $(id, root).value = '';
-      /* site.js dang nghe. Gui kem slug de no biet cho den khi thay dung
-         tam anh vua them, thay vi hoi mot lan roi thoi. */
-      document.dispatchEvent(new CustomEvent('zecat:memes-changed', { detail: { slug: out.slug } }));
-    } catch (err) {
-      say(msg, err.message, 'bad');
-      btn.disabled = false;
+    msg.hidden = true;
+
+    let done = 0, failed = 0, last = null;
+    for (const item of todo) {
+      item.stateEl.textContent = 'sending';
+      item.stateEl.className = 'q-state';
+      try {
+        const out = await call('upload', {
+          slug: item.slug,
+          alt: item.desc.value.trim(),
+          thumb: item.thumb.b64,
+          full: item.full.b64,
+          w: item.full.w,
+          h: item.full.h,
+        });
+        item.state = 'done';
+        item.stateEl.textContent = 'on the wall';
+        item.stateEl.className = 'q-state ok';
+        item.desc.disabled = true;
+        done++; last = out.slug;
+      } catch (err) {
+        item.state = 'failed';
+        item.stateEl.textContent = err.message.slice(0, 40);
+        item.stateEl.className = 'q-state bad';
+        failed++;
+      }
     }
+
+    say(msg,
+      done + (done === 1 ? ' image added' : ' images added') +
+      (failed ? ', ' + failed + ' failed' : '') + '.',
+      failed ? 'bad' : 'good');
+
+    if (last) {
+      /* site.js dang nghe. Gui kem slug cuoi cung de no cho den khi thay
+         dung tam do tren tuong, thay vi hoi mot lan roi thoi. */
+      document.dispatchEvent(new CustomEvent('zecat:memes-changed', { detail: { slug: last } }));
+    }
+    refreshButtons();
   });
 
   $('[data-chpw]', root).addEventListener('click', async () => {

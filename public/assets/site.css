@@ -301,30 +301,22 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 .warn{margin:0;border-left:3px solid var(--coral);padding:4px 0 4px 16px;font-size:15px;color:var(--text-hi);max-width:70ch}
 
 /* ---------------------------------------------------------------- memes */
-.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
-.filters button{
-  font-family:var(--mono);font-size:12px;font-weight:500;background:transparent;
-  border:1px solid var(--line-2);color:var(--muted);padding:7px 14px;cursor:pointer;
-  transition:background .12s var(--ease),color .12s var(--ease),border-color .12s var(--ease);
-}
-.filters button:hover{border-color:var(--gold-3);color:var(--gold)}
-.filters button[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--ink)}
-
-.gallery{columns:3;column-gap:16px}
+.gallery{columns:3;column-gap:14px}
 .tile{
-  break-inside:avoid;margin:0 0 16px;position:relative;width:100%;
+  break-inside:avoid;margin:0 0 14px;position:relative;width:100%;
   border:1px solid var(--line-2);background:var(--panel);padding:0;cursor:pointer;
-  font:inherit;color:inherit;text-align:left;
+  font:inherit;color:inherit;line-height:0;
   transition:transform .14s var(--ease),box-shadow .14s var(--ease),border-color .14s var(--ease);
 }
 .tile:hover{transform:translate(-3px,-3px);box-shadow:6px 6px 0 var(--wood);border-color:var(--gold)}
 .tile img{width:100%;height:auto;background:var(--panel-2)}
-.tile figcaption,.vidcard figcaption{
-  padding:11px 13px;font-size:13.5px;color:var(--text);
+/* Chi con clip moi giu thanh chu, vi no co tieng va can duoc mo ta. */
+.vidcard figcaption{
+  padding:11px 13px;font-size:13.5px;color:var(--text);line-height:1.5;
   display:flex;justify-content:space-between;gap:10px;align-items:baseline;
 }
-.tile figcaption i,.vidcard figcaption i{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--muted);flex:none}
-.vidcard{break-inside:avoid;margin:0 0 16px;border:1px solid var(--gold-3);background:var(--panel)}
+.vidcard figcaption i{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--muted);flex:none}
+.vidcard{break-inside:avoid;margin:0 0 14px;border:1px solid var(--gold-3);background:var(--panel)}
 .vidcard video{width:100%;height:auto}
 /* Mo ta bang chu cho clip. Nguoi khong nghe duoc van biet trong do co gi. */
 .vidnote{margin:0;padding:0 13px 13px;font-size:12.5px;color:var(--muted);line-height:1.6}
@@ -377,7 +369,7 @@ footer{border-top:1px solid var(--line);padding-block:var(--step) calc(var(--ste
 .lb[hidden]{display:none}
 .lb figure{margin:0;max-width:min(900px,100%);max-height:100%;display:flex;flex-direction:column;gap:12px}
 .lb img{max-height:76vh;width:auto;margin-inline:auto;border:1px solid var(--line-2)}
-.lb figcaption{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:14px;color:var(--text)}
+.lb figcaption{display:flex;justify-content:flex-end;gap:16px;flex-wrap:wrap;font-size:14px;color:var(--text)}
 .lb .nav{display:flex;gap:8px}
 .lb button{font-family:var(--mono);font-size:12px;background:transparent;border:1px solid var(--line-2);color:var(--text);padding:7px 13px;cursor:pointer}
 .lb button:hover{border-color:var(--gold);color:var(--gold)}

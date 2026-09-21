@@ -9,7 +9,8 @@
  *   action: "login"     { password }            -> dat cookie phien
  *   action: "logout"                            -> xoa cookie
  *   action: "password"  { current, next }       -> doi mat khau, huy moi phien
- *   action: "upload"    { slug,title,alt,tag,thumb,full,w,h } -> them meme
+ *   action: "upload"    { slug,alt?,tag?,thumb,full,w,h } -> them meme
+ *                       title va alt deu tuy chon. slug trung se tu doi ten.
  *   action: "remove"    { slug }                -> go mot meme da upload
  *
  * Anh duoc luu THANG VAO D1 dang base64. Khong dung thu vien anh nao ca:
@@ -137,29 +138,53 @@ async function doPassword(request, response, body) {
   response.status(200).end(JSON.stringify({ ok: true }));
 }
 
+/**
+ * Doi mot slug bi trung thanh slug con trong: them -2, -3, ...
+ * Can den no vi khu quan tri gio tha duoc mot luc nhieu anh, va ten file
+ * trung nhau la chuyen binh thuong. Tra ve null neu thu het 50 lan.
+ */
+async function freeSlug(base) {
+  for (let i = 0; i < 50; i++) {
+    const candidate = i === 0 ? base : base + '-' + (i + 1);
+    if (candidate.length > 49) return null;
+    const taken = await d1Query('SELECT slug FROM memes WHERE slug = ?', [candidate]);
+    if (!taken.length) return candidate;
+  }
+  return null;
+}
+
+/** "wanted-on-zcash" -> "Wanted on zcash". Chi de co cai ma goi trong D1. */
+function titleFromSlug(slug) {
+  const words = slug.split('-').filter(Boolean).join(' ');
+  return words ? words[0].toUpperCase() + words.slice(1) : slug;
+}
+
 async function doUpload(request, response, body) {
-  const slug = str(body.slug).toLowerCase();
-  const title = str(body.title);
+  const wanted = str(body.slug).toLowerCase();
   const alt = str(body.alt);
   const tag = str(body.tag).toLowerCase() || 'scene';
 
-  if (!SLUG.test(slug)) {
-    return fail(response, 400, 'The name may only use lowercase letters, numbers and dashes.');
+  if (!SLUG.test(wanted)) {
+    return fail(response, 400, 'The file name has no usable letters or numbers in it.');
   }
-  if (title.length < 2 || title.length > 80) return fail(response, 400, 'Give it a title.');
-  /* alt khong phai tuy chon. Mot tam anh khong co alt la mot tam anh khong
-     ton tai voi nguoi dung trinh doc man hinh. */
-  if (alt.length < 8 || alt.length > 300) {
-    return fail(response, 400, 'Describe the image for people who cannot see it, at least a few words.');
-  }
+  /* Mo ta la TUY CHON. Truoc day no bat buoc, va dieu do dung cho mot tam
+     anh mot luc; voi mot lan tha hai muoi tam thi no bien thanh hai muoi o
+     trong phai dien. De trong thi de trong that, khong bia ra mot cau mo ta
+     gia, vi mot mo ta sai con te hon khong co. */
+  if (alt.length > 300) return fail(response, 400, 'That description is too long.');
   if (!TAG.test(tag)) return fail(response, 400, 'Bad tag.');
 
   const thumb = decodeJpeg(body.thumb, MAX_THUMB_BYTES);
   const full = decodeJpeg(body.full, MAX_FULL_BYTES);
   if (!thumb || !full) return fail(response, 400, 'The image did not arrive as a valid JPEG.');
 
-  const taken = await d1Query('SELECT slug FROM memes WHERE slug = ?', [slug]);
-  if (taken.length) return fail(response, 409, 'That name is already used.');
+  const slug = await freeSlug(wanted);
+  if (!slug) return fail(response, 409, 'Could not find a free name for that file.');
+
+  /* Cot title trong D1 la NOT NULL, va van huu ich khi tra cuu bang tay,
+     nen suy ra tu ten file thay vi bat nguoi dung go. No khong hien len
+     trang nua. */
+  const title = str(body.title) || titleFromSlug(slug);
 
   const w = Number(body.w) | 0;
   const h = Number(body.h) | 0;
