@@ -159,9 +159,8 @@
     return out;
   }
 
-  /** Thu nho trong trinh duyet. Tra ve base64 khong co tien to data:. */
-  async function shrink(file, maxEdge) {
-    const bmp = await createImageBitmap(file);
+  /** Ve mot anh da giai ma xuong co mong muon, tra ve base64 khong co tien to. */
+  async function render(bmp, maxEdge) {
     const scale = Math.min(1, maxEdge / Math.max(bmp.width, bmp.height));
     const w = Math.max(1, Math.round(bmp.width * scale));
     const h = Math.max(1, Math.round(bmp.height * scale));
@@ -170,7 +169,6 @@
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(bmp, 0, 0, w, h);
-    bmp.close && bmp.close();
     const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', QUALITY));
     if (!blob) throw new Error('This browser could not convert the image.');
     const bytes = new Uint8Array(await blob.arrayBuffer());
@@ -179,14 +177,46 @@
     return { b64: btoa(bin), w, h, bytes: bytes.length };
   }
 
+  /**
+   * Giai ma anh MOT lan roi ve ca hai co tu cung mot bitmap.
+   * Ban truoc goi createImageBitmap hai lan cho moi file, tuc la giai ma mot
+   * tam 12 megapixel hai luot. Voi hai muoi hai tam thi do la hai muoi hai
+   * luot giai ma thua, va chinh no lam viec chuan bi lau den muc nguoi dung
+   * bam Upload truoc khi hang doi san sang.
+   */
+  async function shrinkBoth(file) {
+    const bmp = await createImageBitmap(file);
+    try {
+      return { full: await render(bmp, FULL_EDGE), thumb: await render(bmp, THUMB_EDGE) };
+    } finally {
+      bmp.close && bmp.close();
+    }
+  }
+
   const slugify = (s) => s.toLowerCase().normalize('NFKD')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48);
 
+  /**
+   * Trang thai cua nut gui.
+   *
+   * Khi CON tam nao dang thu nho thi nut bi khoa va hien so tien do. Ban
+   * truoc khong lam vay: nut sang len ngay khi mot tam dau tien xong, va
+   * nhan cua no dem dan. Tha hai muoi hai anh dien thoai roi bam luc no ghi
+   * "Upload 6 images" thi dung sau tam duoc gui, con muoi sau tam van dang
+   * thu nho. Do khong phai loi cua nguoi dung, do la nut moi ho bam som.
+   */
   function refreshButtons() {
+    const sizing = queue.filter((q) => q.state === 'sizing').length;
     const ready = queue.filter((q) => q.state === 'ready').length;
     const send = $('[data-send]', root);
-    send.disabled = ready === 0;
-    send.textContent = ready === 0 ? 'Upload' : 'Upload ' + ready + (ready === 1 ? ' image' : ' images');
+
+    if (sizing) {
+      send.disabled = true;
+      send.textContent = 'Preparing ' + (queue.length - sizing) + ' of ' + queue.length;
+    } else {
+      send.disabled = ready === 0;
+      send.textContent = ready === 0 ? 'Upload' : 'Upload ' + ready + (ready === 1 ? ' image' : ' images');
+    }
     $('[data-clear]', root).hidden = queue.length === 0;
   }
 
@@ -203,6 +233,10 @@
     if (!list.length) { say(msg, 'Those were not images.', 'bad'); return; }
     msg.hidden = true;
 
+    /* Dung DU hang truoc, roi moi thu nho tung tam.
+       Neu vua dung vua thu nho thi so tong trong nhan nut dem dan len, va
+       "Preparing 1 of 2" khi dang co hai muoi hai file la mot con so sai. */
+    const fresh = [];
     for (const file of list) {
       const item = {
         file,
@@ -214,25 +248,37 @@
         '<img alt="">' +
         '<span class="q-mid"><span class="q-name"></span>' +
         '<input type="text" maxlength="300" placeholder="Describe it for people who cannot see it (optional)"></span>' +
-        '<span class="q-state">resizing</span>';
+        '<span class="q-state">waiting</span>';
       $('.q-name', li).textContent = file.name;
       item.row = li;
       item.desc = $('input', li);
       item.stateEl = $('.q-state', li);
       $('[data-queue]', root).appendChild(li);
       queue.push(item);
-      refreshButtons();
+      fresh.push(item);
+    }
+    refreshButtons();
 
+    for (const item of fresh) {
+      const file = item.file;
+      item.stateEl.textContent = 'resizing';
       try {
-        item.full = await shrink(file, FULL_EDGE);
-        item.thumb = await shrink(file, THUMB_EDGE);
-        $('img', li).src = 'data:image/jpeg;base64,' + item.thumb.b64;
+        const both = await shrinkBoth(file);
+        item.full = both.full;
+        item.thumb = both.thumb;
+        $('img', item.row).src = 'data:image/jpeg;base64,' + item.thumb.b64;
         item.state = 'ready';
         item.stateEl.textContent = Math.round(item.full.bytes / 1024) + ' KB';
         item.stateEl.className = 'q-state';
       } catch (err) {
         item.state = 'failed';
-        item.stateEl.textContent = 'cannot read';
+        /* Noi RA ly do that. Ban truoc luon in mot cau chung chung, nen khi
+           mot loat anh hong thi khong ai biet vi sao, ke ca nguoi viet ra no.
+           Ly do hay gap: iPhone xuat HEIC ma trinh duyet khong giai ma duoc. */
+        const why = (err && err.message) ? String(err.message) : String(err);
+        item.stateEl.textContent = why.slice(0, 44);
+        item.stateEl.title = why;
+        console.error('zecat upload: ' + file.name, err);
         item.stateEl.className = 'q-state bad';
       }
       refreshButtons();
@@ -328,7 +374,10 @@
     msg.hidden = true;
 
     let done = 0, failed = 0, last = null;
+    let at = 0;
     for (const item of todo) {
+      at++;
+      btn.textContent = 'Sending ' + at + ' of ' + todo.length;
       item.stateEl.textContent = 'sending';
       item.stateEl.className = 'q-state';
       try {
@@ -353,9 +402,13 @@
       }
     }
 
+    /* Neu trong luc gui co them tam thu nho xong thi noi ro, thay vi de
+       nguoi dung tuong da xong het. */
+    const leftover = queue.filter((q) => q.state === 'ready').length;
     say(msg,
       done + (done === 1 ? ' image added' : ' images added') +
-      (failed ? ', ' + failed + ' failed' : '') + '.',
+      (failed ? ', ' + failed + ' failed' : '') + '.' +
+      (leftover ? ' ' + leftover + ' more finished preparing, press upload again.' : ''),
       failed ? 'bad' : 'good');
 
     if (last) {
