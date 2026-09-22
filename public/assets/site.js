@@ -407,8 +407,9 @@
    * chia lai do cao sao cho tong be rong dung bang cho con lai. Vi be rong
    * tinh tu ti le that, khong tam nao bi cat.
    *
-   * Hang cuoi thuong thieu anh. Keo no cao gap doi cac hang tren chi de cho
-   * day be la xau, nen hang cuoi chi duoc can khi no da gan day.
+   * Tren desktop, chia deu so anh giua cac hang de hang cuoi khong bi hut
+   * mot khoang rong. Neu buc tuong chi co vai anh thi khong phong chung len
+   * qua lon chi de lap kin mot hang.
    */
   let laidOutAt = -1;
 
@@ -456,13 +457,42 @@
       sum = 0;
     };
 
-    for (const el of tiles) {
-      const r = ratioOf(el);
-      row.push({ el, r });
-      sum += r;
-      if (mobile ? row.length === 3 : sum * target + gap * (row.length - 1) >= box) flush(false);
+    if (mobile) {
+      for (const el of tiles) {
+        const r = ratioOf(el);
+        row.push({ el, r });
+        sum += r;
+        if (row.length === 3) flush(false);
+      }
+      flush(true);
+      return;
     }
-    flush(true);
+
+    const preferred = Math.max(2, Math.round(box / target));
+    if (tiles.length <= preferred) {
+      for (const el of tiles) {
+        const r = ratioOf(el);
+        row.push({ el, r });
+        sum += r;
+      }
+      flush(true);
+      return;
+    }
+
+    const rows = Math.ceil(tiles.length / preferred);
+    const base = Math.floor(tiles.length / rows);
+    const extra = tiles.length % rows;
+    let at = 0;
+    for (let i = 0; i < rows; i++) {
+      const count = base + (i < extra ? 1 : 0);
+      for (let j = 0; j < count; j++) {
+        const el = tiles[at++];
+        const r = ratioOf(el);
+        row.push({ el, r });
+        sum += r;
+      }
+      flush(false);
+    }
   }
 
   /* Goi bao nhieu lan cung duoc, chi xep mot lan moi khung hinh.
