@@ -2,7 +2,11 @@
  * GET /api/memes  —  the meme wall.
  *
  * { "ok": true, "source": "d1" | "static",
- *   "data": [ { id, slug, title, alt, tag, credit, featured, sort } ] }
+ *   "data": [ { id, slug, title, alt, tag, credit, featured, sort, stored, w, h } ] }
+ *
+ * w and h describe the image's real aspect ratio before the bytes arrive:
+ * the full variant for uploads and the thumbnail for bundled images.
+ * They are 0 when unknown; the front end then measures after load.
  *
  * Two sources, one shape:
  *   d1      when CF_ACCOUNT_ID + CF_D1_DATABASE_ID + CF_API_TOKEN are set and
@@ -81,6 +85,10 @@ function shape(row) {
     /* 1 = anh nam trong D1, phuc vu boi /api/meme-image.
        0 = anh nam trong repo tai public/meme/<slug>.jpg */
     stored: bool(r.stored),
+    /* Co so cua ban thumb thi buc tuong xep hang dung ngay lan dau. Khong co
+       thi bang khong, va trinh duyet do lay sau khi anh tai xong. */
+    w: num(r.w),
+    h: num(r.h),
   };
 }
 
@@ -167,14 +175,36 @@ async function loadStatic() {
 
 /** Read the memes table. Throws on any D1 trouble; the caller falls back. */
 async function loadD1(tag) {
-  const where = tag ? ' WHERE lower(tag) = lower(?)' : '';
+  const where = tag ? ' WHERE lower(m.tag) = lower(?)' : '';
   const params = tag ? [tag] : [];
+  /* LEFT JOIN, khong phai JOIN: mot hang meme co the tro den mot anh nam
+     trong repo, khong co dong nao trong meme_blobs. JOIN thuong se lam mat
+     sach muoi lam tam anh goc khoi buc tuong. */
   const sql =
-    'SELECT id, slug, title, alt, tag, credit, featured, sort, stored FROM memes' +
+    'SELECT m.id, m.slug, m.title, m.alt, m.tag, m.credit, m.featured, m.sort,' +
+    " m.stored, b.w AS w, b.h AS h" +
+    ' FROM memes m' +
+    /* variant='full', khong phai 'thumb': api/admin.js:198 co y ghi 0 vao
+       w/h cua hang thumb va chi ghi so that vao hang full. Hai ban deu ve tu
+       cung mot bitmap voi cung phep thu nho theo ti le, nen TI LE cua chung
+       bang nhau, ma buc tuong chi can ti le. Doc tu 'full' con co cai loi la
+       nhung tam da upload truoc day deu dung duoc ngay, khong phai va lai
+       du lieu cu. */
+    " LEFT JOIN meme_blobs b ON b.slug = m.slug AND b.variant = 'full'" +
     where +
-    ' ORDER BY sort ASC, id ASC';
+    ' ORDER BY m.sort ASC, m.id ASC';
   const rows = await d1Query(sql, params);
-  return rows.map(shape);
+  /* Bundled memes have no meme_blobs row. Their measured thumbnail sizes live
+     in the generated fallback JSON, so merge those sizes into D1's rows. */
+  const bundled = new Map((await loadStatic()).map((m) => [m.slug, m]));
+  return rows.map((row) => {
+    const size = bundled.get(str(row.slug));
+    return shape({
+      ...row,
+      w: num(row.w) > 0 ? row.w : size?.w,
+      h: num(row.h) > 0 ? row.h : size?.h,
+    });
+  });
 }
 
 /**

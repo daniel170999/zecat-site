@@ -381,6 +381,108 @@
     visible = $$('.gallery .tile').map((el) => ({ el, slug: el.dataset.slug }));
     const foot = $('#gallery-count');
     if (foot) foot.textContent = visible.length + (visible.length === 1 ? ' image' : ' images');
+    relayout();
+  }
+
+  /* Do cao mong muon cua mot hang, theo be rong cho co. Tren dien thoai la
+     ba tam mot hang, gan dung cach moi thu vien anh tren dien thoai lam. */
+  const rowTarget = (w) => (w < 460 ? 118 : w < 700 ? 150 : w < 1000 ? 185 : 215);
+
+  /* Ti le that cua mot tam. The width/height tren <img> co ngay tu byte dau
+     tien cua trang, con naturalWidth chi co sau khi anh tai xong. Chua biet
+     gi thi tam coi la vuong, va ham nay duoc goi lai khi anh tai xong. */
+  function ratioOf(tile) {
+    const img = tile.querySelector('img');
+    if (!img) return 1;
+    const w = img.naturalWidth || Number(img.getAttribute('width')) || 0;
+    const h = img.naturalHeight || Number(img.getAttribute('height')) || 0;
+    if (!(w > 0 && h > 0)) return 1;
+    return w / h;
+  }
+
+  /**
+   * Xep anh thanh nhung hang cao bang nhau, met phai thang.
+   *
+   * Voi moi hang: gom anh vao den khi be rong tu nhien vuot qua cho, roi
+   * chia lai do cao sao cho tong be rong dung bang cho con lai. Vi be rong
+   * tinh tu ti le that, khong tam nao bi cat.
+   *
+   * Hang cuoi thuong thieu anh. Keo no cao gap doi cac hang tren chi de cho
+   * day be la xau, nen hang cuoi chi duoc can khi no da gan day.
+   */
+  let laidOutAt = -1;
+
+  function justify() {
+    const wall = $('.gallery');
+    if (!wall) return;
+    const tiles = $$('.tile', wall);
+    if (!tiles.length) return;
+
+    /* getBoundingClientRect lam tron xuong, clientWidth lam tron len. Lay
+       ban nho hon, neu khong thi tong be rong co the vuot cho mot phan pixel
+       va tam cuoi cua hang bi day xuong hang duoi. */
+    const box = Math.floor(wall.getBoundingClientRect().width);
+    /* Khi phan tu dang an, trinh duyet bao be rong bang khong. Xep luc do se
+       ra mot hang dai vo nghia, nen bo qua va cho lan sau. */
+    if (box < 80) return;
+
+    const gap = parseFloat(getComputedStyle(wall).columnGap) || 12;
+    const target = rowTarget(box);
+    const mobile = box < 460;
+    wall.classList.add('just');
+    laidOutAt = box;
+
+    let row = [];
+    let sum = 0;
+
+    const flush = (isLast) => {
+      if (!row.length) return;
+      const avail = box - gap * (row.length - 1);
+      let h = avail / sum;
+      let fill = true;
+      if (isLast && h > target * 1.35) { h = target; fill = false; }
+      const height = Math.max(1, Math.round(h));
+      let used = 0;
+      row.forEach((t, i) => {
+        const last = i === row.length - 1;
+        /* Don toan bo sai so lam tron vao tam cuoi cua hang, nen tong luon
+           khop tuyet doi voi be rong cho. */
+        const w = (fill && last) ? Math.max(1, avail - used) : Math.max(1, Math.round(t.r * h));
+        used += w;
+        t.el.style.width = w + 'px';
+        t.el.style.height = height + 'px';
+      });
+      row = [];
+      sum = 0;
+    };
+
+    for (const el of tiles) {
+      const r = ratioOf(el);
+      row.push({ el, r });
+      sum += r;
+      if (mobile ? row.length === 3 : sum * target + gap * (row.length - 1) >= box) flush(false);
+    }
+    flush(true);
+  }
+
+  /* Goi bao nhieu lan cung duoc, chi xep mot lan moi khung hinh.
+     Hen bang CA requestAnimationFrame LAN setTimeout, va cai nao chay truoc
+     thi thang. Ly do: requestAnimationFrame khong chay khi tab dang an. Neu
+     chi hen bang no thi mo site o mot tab nen se de co "queued" ket lai o
+     true vinh vien, va tu do moi lan goi relayout deu tro ve ngay lap tuc,
+     tuc la buc tuong khong bao gio duoc xep lai nua. Day khong phai gia
+     thiet: da bat duoc dung the trong khung xem thu. */
+  let queued = false;
+  function relayout() {
+    if (queued) return;
+    queued = true;
+    const run = () => {
+      if (!queued) return;
+      queued = false;
+      justify();
+    };
+    requestAnimationFrame(run);
+    setTimeout(run, 250);
   }
 
   function gallery() {
@@ -406,8 +508,22 @@
     idx = i;
     const m = visible[i];
     const img = $('#lb-img');
-    img.src = m.el.dataset.full || ('meme/' + m.slug + '.jpg');
+    const src = m.el.dataset.full || ('meme/' + m.slug + '.jpg');
+    img.src = src;
     img.alt = m.el.dataset.alt || '';
+
+    /* Nut tai ve. Ca hai duong nguon anh deu cung mot mien, nen thuoc tinh
+       download duoc ton trong va ten file la cai minh dat, khong phai
+       "meme-image" hay mot chuoi truy van. Tren dien thoai khong co bam
+       chuot phai, nen day la cach duy nhat de lay anh ve. */
+    const get = $('#lb-get');
+    if (get) {
+      get.href = src;
+      get.setAttribute('download', 'zecat-' + m.slug + '.jpg');
+    }
+    const count = $('#lb-count');
+    if (count) count.textContent = (i + 1) + ' / ' + visible.length;
+
     box.hidden = false;
     document.body.style.overflow = 'hidden';
     $('#lb-close').focus();
@@ -442,7 +558,9 @@
       else if (e.key === 'ArrowRight') step(1);
       else if (e.key === 'Tab') {
         /* keep focus inside the dialog while it is open */
-        const f = $$('button', box);
+        /* 'button,a' chu khong chi 'button': nut tai ve la mot the neo, va
+           neu bay nay khong biet den no thi Tab nhay ra khoi hop thoai. */
+        const f = $$('button,a', box);
         const first = f[0], last = f[f.length - 1];
         if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
         else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
@@ -548,6 +666,15 @@
       img.src = inDb ? 'api/meme-image?' + q + '&v=thumb' : 'thumb/' + r.slug + '.jpg';
       img.alt = r.alt || '';
       img.loading = 'lazy';
+      /* Be rong va do cao that, lay tu D1. Co san hai so nay thi justify()
+         biet ti le truoc khi anh tai xong, nen buc tuong khong nhay mot cai
+         khi anh lan luot ve. Hang cu chua co hai so do thi bo trong, va
+         listener duoi day xep lai khi anh tai xong. */
+      if (r.w > 0 && r.h > 0) {
+        img.setAttribute('width', String(r.w));
+        img.setAttribute('height', String(r.h));
+      }
+      img.addEventListener('load', relayout);
       /* Mot hang co the vao D1 truoc khi anh kip len. Go the ra thay vi de
          lai mot khung vo. */
       img.addEventListener('error', () => { fig.remove(); collect(); });
@@ -650,6 +777,20 @@
       await new Promise((r) => setTimeout(r, 600));
     }
   });
+
+  /* Doi be rong cua so, hoac quay ngang dien thoai, thi hang phai xep lai.
+     Anh tai xong sau khi trang da ve xong cung vay. */
+  if (window.ResizeObserver) {
+    const wall = $('.gallery');
+    if (wall) {
+      new ResizeObserver(() => {
+        if (Math.floor(wall.getBoundingClientRect().width) !== laidOutAt) relayout();
+      }).observe(wall);
+    }
+  }
+  window.addEventListener('resize', relayout);
+  window.addEventListener('orientationchange', relayout);
+  window.addEventListener('load', relayout);
 
   /* keyboard support for the figure-as-button tiles */
   document.addEventListener('keydown', (e) => {

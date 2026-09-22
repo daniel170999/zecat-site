@@ -7,7 +7,9 @@
     "tag": "poster",
     "credit": null,
     "featured": 1,
-    "sort": 10
+    "sort": 10,
+    "w": 600,
+    "h": 600
   },
   {
     "id": 2,
@@ -17,7 +19,9 @@
     "tag": "poster",
     "credit": null,
     "featured": 1,
-    "sort": 20
+    "sort": 20,
+    "w": 600,
+    "h": 600
   },
   {
     "id": 3,
@@ -27,7 +31,9 @@
     "tag": "poster",
     "credit": null,
     "featured": 1,
-    "sort": 30
+    "sort": 30,
+    "w": 600,
+    "h": 600
   },
   {
     "id": 4,
@@ -37,7 +43,9 @@
     "tag": "poster",
     "credit": null,
     "featured": 0,
-    "sort": 40
+    "sort": 40,
+    "w": 600,
+    "h": 600
   },
   {
     "id": 5,
@@ -47,7 +55,9 @@
     "tag": "poster",
     "credit": null,
     "featured": 0,
-    "sort": 50
+    "sort": 50,
+    "w": 600,
+    "h": 600
   },
   {
     "id": 6,
@@ -57,7 +67,9 @@
     "tag": "scene",
     "credit": null,
     "featured": 0,
-    "sort": 60
+    "sort": 60,
+    "w": 600,
+    "h": 600
   },
   {
     "id": 7,
@@ -67,7 +79,9 @@
     "tag": "scene",
     "credit": null,
     "featured": 0,
-    "sort": 70
+    "sort": 70,
+    "w": 600,
+    "h": 400
   },
   {
     "id": 8,
@@ -77,7 +91,9 @@
     "tag": "scene",
     "credit": null,
     "featured": 0,
-    "sort": 80
+    "sort": 80,
+    "w": 600,
+    "h": 298
   },
   {
     "id": 9,
@@ -87,7 +103,9 @@
     "tag": "scene",
     "credit": null,
     "featured": 0,
-    "sort": 90
+    "sort": 90,
+    "w": 448,
+    "h": 600
   },
   {
     "id": 10,
@@ -97,7 +115,9 @@
     "tag": "scene",
     "credit": null,
     "featured": 0,
-    "sort": 100
+    "sort": 100,
+    "w": 600,
+    "h": 402
   },
   {
     "id": 11,
@@ -107,7 +127,9 @@
     "tag": "scene",
     "credit": null,
     "featured": 0,
-    "sort": 110
+    "sort": 110,
+    "w": 558,
+    "h": 600
   },
   {
     "id": 12,
@@ -117,7 +139,9 @@
     "tag": "scene",
     "credit": null,
     "featured": 0,
-    "sort": 120
+    "sort": 120,
+    "w": 516,
+    "h": 600
   },
   {
     "id": 13,
@@ -127,7 +151,9 @@
     "tag": "scene",
     "credit": null,
     "featured": 0,
-    "sort": 130
+    "sort": 130,
+    "w": 521,
+    "h": 600
   },
   {
     "id": 14,
@@ -137,7 +163,9 @@
     "tag": "scene",
     "credit": null,
     "featured": 0,
-    "sort": 140
+    "sort": 140,
+    "w": 400,
+    "h": 600
   },
   {
     "id": 15,
@@ -147,6 +175,8 @@
     "tag": "scene",
     "credit": null,
     "featured": 0,
-    "sort": 150
+    "sort": 150,
+    "w": 600,
+    "h": 600
   }
 ]

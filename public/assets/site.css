@@ -301,29 +301,53 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 .warn{margin:0;border-left:3px solid var(--coral);padding:4px 0 4px 16px;font-size:15px;color:var(--text-hi);max-width:70ch}
 
 /* ---------------------------------------------------------------- memes */
-.gallery{columns:3;column-gap:14px}
+/* Buc tuong xep theo HANG NGANG, khong theo cot.
+   columns:3 cua CSS do anh chay doc het cot mot roi moi sang cot hai, nen
+   tam thu hai khong nam canh tam thu nhat ma nam DUOI no. Mat nguoi doc theo
+   hang, nen thu tu do sai ngay tu dau, va ba cot ket thuc o ba do cao khac
+   nhau nen day luoi luon le.
+   Bay gio: moi hang cao bang nhau, met phai thang, va khong cat anh mot pixel
+   nao vi be rong tung tam tinh tu ti le that cua no. Con so do site.js tinh,
+   ham justify(). CSS o day la trang thai truoc khi no chay, va la trang thai
+   duy nhat neu JS khong chay: van la mot buc tuong anh cao deu, chi khac la
+   met phai le. */
+.gallery{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
 .tile{
-  break-inside:avoid;margin:0 0 14px;position:relative;width:100%;
-  border:1px solid var(--line-2);background:var(--panel);padding:0;cursor:pointer;
-  font:inherit;color:inherit;line-height:0;
+  flex:0 0 auto;height:200px;box-sizing:border-box;margin:0;position:relative;
+  border:1px solid var(--line-2);background:var(--panel-2);padding:0;cursor:pointer;
+  overflow:hidden;font:inherit;color:inherit;line-height:0;
   transition:transform .14s var(--ease),box-shadow .14s var(--ease),border-color .14s var(--ease);
 }
-.tile:hover{transform:translate(-3px,-3px);box-shadow:6px 6px 0 var(--wood);border-color:var(--gold)}
-.tile img{width:100%;height:auto;background:var(--panel-2)}
-/* Chi con clip moi giu thanh chu, vi no co tieng va can duoc mo ta. */
-.vidcard figcaption{
-  padding:11px 13px;font-size:13.5px;color:var(--text);line-height:1.5;
-  display:flex;justify-content:space-between;gap:10px;align-items:baseline;
+/* max-width:none de pha vong lap: img{max-width:100%} o tren tinh theo be
+   rong cua the, ma be rong cua the lai dang tinh theo img. */
+.tile img{height:100%;width:auto;max-width:none}
+/* Sau khi site.js can hang, moi tam co be rong va do cao rieng tinh san.
+   contain giu nguyen toan bo anh ke ca khi co sai so lam tron. */
+.gallery.just .tile{height:auto}
+.gallery.just .tile img{width:100%;height:100%;object-fit:contain}
+.tile:hover,.tile:focus-visible{
+  transform:translate(-3px,-3px);box-shadow:6px 6px 0 var(--wood);
+  border-color:var(--gold);z-index:1;
 }
-.vidcard figcaption i{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--muted);flex:none}
-.vidcard{break-inside:avoid;margin:0 0 14px;border:1px solid var(--gold-3);background:var(--panel)}
-.vidcard video{width:100%;height:auto}
+.tile[hidden]{display:none}
+.gallery-foot{margin-top:12px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+/* Clip 18 giay: khoi rieng phia tren buc tuong. Truoc day no nam lan trong
+   luoi, va vi no la thu duy nhat co thanh chu nen no luon cao hon moi tam
+   khac va lam hong hang. */
+.clip{
+  display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);
+  margin:0 0 22px;border:1px solid var(--gold-3);background:var(--panel);
+}
+.clip video{width:100%;height:auto}
+.clip-txt{padding:18px 20px;display:flex;flex-direction:column;gap:9px;justify-content:center}
+.clip-head{
+  margin:0;display:flex;justify-content:space-between;gap:12px;align-items:baseline;
+  font-family:var(--display);font-weight:700;font-size:17px;color:var(--text-hi);
+}
+.clip-head i{font-style:normal;font-family:var(--mono);font-weight:400;font-size:11px;letter-spacing:.06em;color:var(--muted);flex:none}
 /* Mo ta bang chu cho clip. Nguoi khong nghe duoc van biet trong do co gi. */
-.vidnote{margin:0;padding:0 13px 13px;font-size:12.5px;color:var(--muted);line-height:1.6}
-/* .tile va .vidcard deu tu dat display, nen de bep [hidden] cua trinh duyet.
-   Thieu dong nay thi bo loc anh khong an duoc gi. */
-.tile[hidden],.vidcard[hidden]{display:none}
-.gallery-foot{margin-top:6px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.vidnote{margin:0;font-size:13px;color:var(--muted);line-height:1.65;max-width:58ch}
 
 /* ---------------------------------------------------------------- posts */
 .posts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start}
@@ -369,24 +393,35 @@ footer{border-top:1px solid var(--line);padding-block:var(--step) calc(var(--ste
 .lb[hidden]{display:none}
 .lb figure{margin:0;max-width:min(900px,100%);max-height:100%;display:flex;flex-direction:column;gap:12px}
 .lb img{max-height:76vh;width:auto;margin-inline:auto;border:1px solid var(--line-2)}
-.lb figcaption{display:flex;justify-content:flex-end;gap:16px;flex-wrap:wrap;font-size:14px;color:var(--text)}
-.lb .nav{display:flex;gap:8px}
-.lb button{font-family:var(--mono);font-size:12px;background:transparent;border:1px solid var(--line-2);color:var(--text);padding:7px 13px;cursor:pointer}
-.lb button:hover{border-color:var(--gold);color:var(--gold)}
+.lb figcaption{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--text)}
+.lb .count{font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--muted)}
+.lb .nav{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.lb button,.lb .get{
+  font-family:var(--mono);font-size:12px;background:transparent;
+  border:1px solid var(--line-2);color:var(--text);padding:7px 13px;cursor:pointer;
+  text-decoration:none;line-height:1.35;display:inline-block;
+}
+.lb button:hover,.lb .get:hover{border-color:var(--gold);color:var(--gold)}
+/* Tai ve la viec nguoi ta den day de lam, nen no la nut sang nhat trong hang. */
+.lb .get{border-color:var(--gold-3);color:var(--gold)}
+.lb .get:hover{background:var(--gold);color:var(--ink)}
 
 /* ----------------------------------------------------------- responsive */
 @media (max-width:920px){
   .hero-grid{grid-template-columns:1fr;gap:40px}
   .hero-art{max-width:360px;margin-inline:auto}
-  .gallery{columns:2}
   .nav{display:none}
   .tl li{grid-template-columns:104px 1fr;gap:0 30px}
   .tl li::before{left:118px}
   .tl li::after{left:113px}
 }
+@media (max-width:700px){
+  .clip{grid-template-columns:1fr}
+  .clip-txt{padding:15px 16px}
+}
 @media (max-width:560px){
   body{font-size:15px}
-  .gallery{columns:1}
+  .gallery{gap:8px}
   .wordmark{text-shadow:4px 4px 0 var(--wood)}
   .bar{padding-block:10px}
   .facts{gap:18px 30px}
@@ -410,6 +445,6 @@ footer{border-top:1px solid var(--line);padding-block:var(--step) calc(var(--ste
   html{scroll-behavior:auto}
   *,*::before,*::after{transition-duration:.01ms !important;animation-duration:.01ms !important}
   .coin-frame{transform:none !important}
-  .tile:hover,.post:hover,.g:hover,.btn.buy:hover,.btn.buy:active{transform:none}
+  .tile:hover,.tile:focus-visible,.post:hover,.g:hover,.btn.buy:hover,.btn.buy:active{transform:none}
   .pulse i{transform:scaleX(1) !important;background:var(--wood-2)}
 }

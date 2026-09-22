@@ -53,15 +53,26 @@ const attr = (chunk, name) => {
 
 const tiles = [...html.matchAll(/<figure class="tile"[^>]*>/g)].map((m) => m[0]);
 
-const memes = tiles.map((chunk, i) => ({
-  id: i + 1,
-  slug: attr(chunk, 'slug'),
-  title: attr(chunk, 'title'),
-  alt: attr(chunk, 'alt'),
-  tag: attr(chunk, 'tag') || 'scene',
-  credit: null,
-  featured: i < 3 ? 1 : 0,
-  sort: (i + 1) * 10,
+const memes = await Promise.all(tiles.map(async (chunk, i) => {
+  const slug = attr(chunk, 'slug');
+  let size = null;
+  if (/^[a-zA-Z0-9_-]+$/.test(slug)) {
+    try {
+      size = jpegSize(await readFile(join(publicDir, 'thumb', slug + '.jpg')));
+    } catch { /* file chua co; buoc dong kich thuoc se bao loi */ }
+  }
+  return {
+    id: i + 1,
+    slug,
+    title: attr(chunk, 'title'),
+    alt: attr(chunk, 'alt'),
+    tag: attr(chunk, 'tag') || 'scene',
+    credit: null,
+    featured: i < 3 ? 1 : 0,
+    sort: (i + 1) * 10,
+    w: size?.w || 0,
+    h: size?.h || 0,
+  };
 }));
 
 /* ------------------------------------------------------------------- posts */
@@ -207,10 +218,7 @@ function jpegSize(buf) {
     // slug thanh duong dan file, nen chi chap nhan slug sach
     if (!/^[a-zA-Z0-9_-]+$/.test(m.slug)) { missed.push(m.slug); continue; }
 
-    let size = null;
-    try {
-      size = jpegSize(await readFile(join(publicDir, 'thumb', m.slug + '.jpg')));
-    } catch { /* file chua co */ }
+    const size = m.w > 0 && m.h > 0 ? { w: m.w, h: m.h } : null;
     if (!size) { missed.push(m.slug); continue; }
 
     const re = new RegExp('<img src="thumb/' + m.slug + '[.]jpg"([^>]*?)>');
