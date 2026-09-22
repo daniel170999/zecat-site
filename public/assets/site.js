@@ -433,66 +433,80 @@
     wall.classList.add('just');
     laidOutAt = box;
 
-    let row = [];
-    let sum = 0;
+    const ratioSum = (g) => g.reduce((a, t) => a + t.r, 0);
 
-    const flush = (isLast) => {
-      if (!row.length) return;
-      const avail = box - gap * (row.length - 1);
-      let h = avail / sum;
+    /**
+     * Dat mot hang: moi tam cao bang nhau, tong be rong dung bang cho.
+     * stretch = false cho phep hang ngan hon target neu keo cho day se lam
+     * no cao qua muc, tranh mot hang cuoi cao gap ruoi cac hang tren.
+     */
+    const place = (g, stretch) => {
+      if (!g.length) return;
+      const avail = box - gap * (g.length - 1);
+      let h = avail / ratioSum(g);
       let fill = true;
-      if (isLast && h > target * 1.35) { h = target; fill = false; }
+      if (!stretch && h > target * 1.5) { h = target; fill = false; }
       const height = Math.max(1, Math.round(h));
       let used = 0;
-      row.forEach((t, i) => {
-        const last = i === row.length - 1;
-        /* Don toan bo sai so lam tron vao tam cuoi cua hang, nen tong luon
-           khop tuyet doi voi be rong cho. */
+      g.forEach((t, i) => {
+        const last = i === g.length - 1;
+        /* Don toan bo sai so lam tron vao tam cuoi, nen tong luon khop tuyet
+           doi voi be rong cho va khong tam nao bi day xuong hang duoi. */
         const w = (fill && last) ? Math.max(1, avail - used) : Math.max(1, Math.round(t.r * h));
         used += w;
         t.el.style.width = w + 'px';
         t.el.style.height = height + 'px';
       });
-      row = [];
-      sum = 0;
     };
 
+    const items = tiles.map((el) => ({ el, r: ratioOf(el) }));
+
+    /* Dien thoai: ba tam mot hang, giong moi thu vien anh tren dien thoai.
+       Neu chia ba ma du dung MOT tam thi hai hang cuoi thanh 2 va 2, khong
+       de mot tam le loi nam mot minh o day tuong. */
     if (mobile) {
-      for (const el of tiles) {
-        const r = ratioOf(el);
-        row.push({ el, r });
-        sum += r;
-        if (row.length === 3) flush(false);
+      const groups = [];
+      for (let i = 0; i < items.length; i += 3) groups.push(items.slice(i, i + 3));
+      const tail = groups[groups.length - 1];
+      if (groups.length >= 2 && tail.length === 1) {
+        const all = groups.splice(-2, 2).reduce((a, g) => a.concat(g), []);
+        groups.push(all.slice(0, 2), all.slice(2));
       }
-      flush(true);
+      groups.forEach((g, i) => place(g, i < groups.length - 1));
       return;
     }
 
-    const preferred = Math.max(2, Math.round(box / target));
-    if (tiles.length <= preferred) {
-      for (const el of tiles) {
-        const r = ratioOf(el);
-        row.push({ el, r });
-        sum += r;
-      }
-      flush(true);
-      return;
-    }
+    /* Chon SO HANG truoc, roi chia sao cho TONG TI LE moi hang bang nhau.
 
-    const rows = Math.ceil(tiles.length / preferred);
-    const base = Math.floor(tiles.length / rows);
-    const extra = tiles.length % rows;
-    let at = 0;
-    for (let i = 0; i < rows; i++) {
-      const count = base + (i < extra ? 1 : 0);
-      for (let j = 0; j < count; j++) {
-        const el = tiles[at++];
-        const r = ratioOf(el);
-        row.push({ el, r });
-        sum += r;
+       Ba cach deu tung thu va hai cach dau deu hong:
+       - Chia deu SO LUONG anh: hang toan anh doc co tong ti le nho nen phai
+         keo that cao moi lap day be, do cao nhay tu 133 len 207.
+       - Goi tham theo be rong roi can lai hai hang cuoi: chin hang dau rat
+         deu, nhung hai hang cuoi bi day len 230 so voi 170, thanh mot bac
+         thang o day tuong.
+       - Cach nay: do cao mot hang ti le nghich voi tong ti le cua no, nen
+         muon moi hang cao bang nhau thi phai cho moi hang cung mot tong ti
+         le. Chia tong ti le cho so hang la ra dinh muc, roi dong hang ngay
+         khi them tam ke tiep se lam no lech xa dinh muc hon la dung lai.
+         Moi hang deu day va deu cao xap xi nhau. */
+    const totalRatio = ratioSum(items);
+    const rowCount = Math.max(1, Math.round(totalRatio / (box / target)));
+    const perRow = totalRatio / rowCount;
+
+    const groups = [];
+    let row = [];
+    for (const it of items) {
+      const cur = ratioSum(row);
+      if (row.length && groups.length < rowCount - 1 &&
+          Math.abs(cur + it.r - perRow) > Math.abs(cur - perRow)) {
+        groups.push(row);
+        row = [];
       }
-      flush(false);
+      row.push(it);
     }
+    if (row.length) groups.push(row);
+
+    groups.forEach((g, i) => place(g, i < groups.length - 1));
   }
 
   /* Goi bao nhieu lan cung duoc, chi xep mot lan moi khung hinh.
@@ -598,6 +612,56 @@
     });
   }
 
+  /* --------------------------------------------------- cua so timeline */
+  /**
+   * Duong chinh cho muc POSTS: widget profile timeline cua X. No tu cap
+   * nhat, moi nhat len truoc, va khong ai phai sua trang nay nua.
+   *
+   * Cai bay o day khong phai "widget co tai duoc khong" ma la "widget co VE
+   * ra gi khong". Do duoc: X van tao ra the iframe roi khong ve gi vao do,
+   * va luc ay iframe cao dung bang khong. Neu tin vao su co mat cua iframe
+   * ma an ban luu di thi khach nhin vao mot o trong. Nen o day DO chieu cao
+   * that, va ban luu chi bi an khi con so do du lon.
+   */
+  function timeline() {
+    const win = $('#tlwin');
+    const live = $('#tlwin-live');
+    const state = $('#tlwin-state');
+    if (!win || !live || !state) return;
+
+    const a = document.createElement('a');
+    a.className = 'twitter-timeline';
+    a.href = 'https://twitter.com/ZecatZcash';
+    a.setAttribute('data-theme', 'dark');
+    a.setAttribute('data-chrome', 'noheader nofooter noborders transparent');
+    a.setAttribute('data-tweet-limit', '20');
+    a.setAttribute('data-dnt', 'true');
+    a.textContent = 'Posts from @ZecatZcash';
+    live.appendChild(a);
+
+    const draw = () => {
+      if (!window.twttr || !window.twttr.widgets) return;
+      try { window.twttr.widgets.load(live); } catch (_) { /* thoi vay */ }
+    };
+    if (window.twttr && window.twttr.widgets) draw();
+    else document.addEventListener('zecat:twttr', draw, { once: true });
+
+    /* Doi toi da 10 giay. Qua do thi coi nhu X khong tra loi, va ban luu o
+       lai dung cho cua no. */
+    let tries = 0;
+    const check = () => {
+      const f = live.querySelector('iframe');
+      if (f && f.getBoundingClientRect().height > 200) {
+        win.classList.add('live');
+        state.textContent = 'Live';
+        state.className = 'tlwin-state on';
+        return;
+      }
+      if (++tries < 20) setTimeout(check, 500);
+    };
+    setTimeout(check, 600);
+  }
+
   /* ---------------------------------------------------------- X embeds */
   /* The real card from X, with the hand written one underneath as the floor.
      platform.twitter.com is third party and does fail: it is blocked on some
@@ -614,6 +678,9 @@
     s.charset = 'utf-8';
 
     s.addEventListener('load', () => {
+      /* timeline() cho su kien nay. Dung chung mot the script, khong tai
+         widgets.js hai lan. */
+      document.dispatchEvent(new CustomEvent('zecat:twttr'));
       if (!window.twttr || !window.twttr.widgets) return;
       for (const card of cards) {
         const id = card.dataset.tweet;
@@ -629,6 +696,21 @@
         const host = document.createElement('div');
         host.className = 'xcard';
         card.parentNode.insertBefore(host, card);
+
+        /* Dong ho nay chay DOC LAP voi loi hua cua X, va do la diem mau chot.
+           Khi X chi nua voi, promise cua createTweet KHONG BAO GIO settle:
+           khong .then, khong .catch, nen moi phep don dep dat ben trong
+           chung deu khong bao gio chay. Da do duoc dung the: nam host cao
+           22px nam lai tren trang, va vi chung khong con :empty nen quy tac
+           css ben duoi an sach nam the viet tay. Muc POSTS thanh nam o
+           trong. Chieu cao la thu duy nhat noi that o day. */
+        let tries = 0;
+        const settle = () => {
+          if (host.getBoundingClientRect().height > 100) return;
+          if (++tries < 16) { setTimeout(settle, 500); return; }
+          host.remove();
+        };
+        setTimeout(settle, 800);
 
         window.twttr.widgets
           .createTweet(id, host, { theme: 'dark', dnt: true, conversation: 'none', align: 'center' })
@@ -671,7 +753,14 @@
     try { res = await getJSON('api/memes'); } catch (_) { return; }
     const rows = (res && res.data) || [];
     const have = new Set($$('.gallery .tile').map((t) => t.dataset.slug));
-    const fresh = rows.filter((r) => r.slug && SLUG_OK.test(r.slug) && !have.has(r.slug));
+    /* Sau tam "photo-N-2026-09-22-..." trong D1 chinh la ban upload dau tien
+       cua sau tam vua duoc nung vao repo voi ten that va mo ta that. Hang cu
+       van con trong D1; khong chan thi tuong hien chung mot lan nua, kem alt
+       text la chinh cai slug may sinh, vo nghia voi trinh doc man hinh.
+       Huong dan deploy co lenh xoa hang do khoi D1. Dong nay la chot an toan:
+       lenh do chay hay khong thi tuong van dung. */
+    const RETIRED = /^photo-\d+-2026-09-22-01-05-47$/;
+    const fresh = rows.filter((r) => r.slug && SLUG_OK.test(r.slug) && !have.has(r.slug) && !RETIRED.test(r.slug));
     if (!fresh.length) return;
 
     for (const r of fresh) {
@@ -840,6 +929,7 @@
   market();
   chart();
   xEmbeds();
+  timeline();
   growGallery();
   growPosts();
   adminDoor();

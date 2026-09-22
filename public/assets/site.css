@@ -191,6 +191,10 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 .head{margin-bottom:38px;max-width:68ch}
 .head h2{font-size:clamp(1.55rem,3.6vw,2.15rem);color:var(--text-hi)}
 .head .sub{color:var(--muted);margin:14px 0 0;max-width:60ch;font-size:15px}
+/* Doan dan truyen. To hon .sub vi no la cau chuyen chu khong phai chu thich,
+   va cau cuoi duoc lam sang len vi do la cho chu "first" dat chan xuong. */
+.story{margin:20px 0 0;max-width:62ch;font-size:16.5px;line-height:1.72;color:var(--text)}
+.story b{color:var(--gold);font-weight:600}
 
 /* ---------------------------------------------------------------- chart */
 .chart-head{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
@@ -348,6 +352,36 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 .clip-head i{font-style:normal;font-family:var(--mono);font-weight:400;font-size:11px;letter-spacing:.06em;color:var(--muted);flex:none}
 /* Mo ta bang chu cho clip. Nguoi khong nghe duoc van biet trong do co gi. */
 .vidnote{margin:0;font-size:13px;color:var(--muted);line-height:1.65;max-width:58ch}
+
+/* ------------------------------------------------------ cua so timeline */
+/* Mot cot hep, giong cot timeline that, cuon trong long no. */
+.tlwin{border:1px solid var(--line-2);background:var(--panel);max-width:620px;margin-inline:auto}
+.tlwin-bar{
+  display:flex;align-items:center;gap:12px;padding:11px 14px;
+  border-bottom:1px solid var(--line-2);background:var(--panel-2);
+  font-family:var(--mono);font-size:12px;
+}
+.tlwin-who{color:var(--text-hi);letter-spacing:.04em}
+.tlwin-state{
+  font-size:10px;letter-spacing:.1em;color:var(--muted);
+  border:1px solid var(--line-2);padding:2px 7px;
+}
+/* Chi doi sang vang khi timeline that da dung xong va DO duoc chieu cao. */
+.tlwin-state.on{color:var(--gold);border-color:var(--gold-3)}
+.tlwin-open{margin-left:auto;color:var(--gold);text-decoration:none;border-bottom:1px solid transparent}
+.tlwin-open:hover{border-bottom-color:var(--gold)}
+.tlwin-feed{max-height:660px;overflow-y:auto;overscroll-behavior:contain;padding:14px;scrollbar-width:thin;scrollbar-color:var(--wood) var(--ink-2)}
+.tlwin-feed::-webkit-scrollbar{width:10px}
+.tlwin-feed::-webkit-scrollbar-track{background:var(--ink-2)}
+.tlwin-feed::-webkit-scrollbar-thumb{background:var(--wood);border:2px solid var(--ink-2)}
+.tlwin-feed::-webkit-scrollbar-thumb:hover{background:var(--wood-2)}
+/* Rong thi khong chiem cho. Cung mot meo voi .xcard ben duoi. */
+.tlwin-live:empty{display:none}
+.tlwin-live iframe{width:100% !important}
+/* Ban luu chi bien mat khi timeline that da thuc su ve ra thu gi do. */
+.tlwin.live .posts{display:none}
+/* Trong cua so thi bai xep thanh mot cot, khong phai luoi. */
+.tlwin .posts{display:flex;flex-direction:column;gap:12px}
 
 /* ---------------------------------------------------------------- posts */
 .posts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start}
