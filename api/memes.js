@@ -82,11 +82,11 @@ function shape(row) {
     credit: str(r.credit),
     featured: bool(r.featured),
     sort: num(r.sort),
-    /* 1 = anh nam trong D1, phuc vu boi /api/meme-image.
-       0 = anh nam trong repo tai public/meme/<slug>.jpg */
+    /* 1 = D1 image served by /api/meme-image.
+       0 = repository image under public/meme/<slug>.jpg. */
     stored: bool(r.stored),
-    /* Co so cua ban thumb thi buc tuong xep hang dung ngay lan dau. Khong co
-       thi bang khong, va trinh duyet do lay sau khi anh tai xong. */
+    /* Dimensions let the gallery lay out before loading. Missing values fall
+       back to browser measurements after the image loads. */
     w: num(r.w),
     h: num(r.h),
   };
@@ -177,19 +177,15 @@ async function loadStatic() {
 async function loadD1(tag) {
   const where = tag ? ' WHERE lower(m.tag) = lower(?)' : '';
   const params = tag ? [tag] : [];
-  /* LEFT JOIN, khong phai JOIN: mot hang meme co the tro den mot anh nam
-     trong repo, khong co dong nao trong meme_blobs. JOIN thuong se lam mat
-     sach muoi lam tam anh goc khoi buc tuong. */
+  /* Use LEFT JOIN because repository images have no meme_blobs row. An inner
+     join would remove them from the gallery. */
   const sql =
     'SELECT m.id, m.slug, m.title, m.alt, m.tag, m.credit, m.featured, m.sort,' +
     " m.stored, b.w AS w, b.h AS h" +
     ' FROM memes m' +
-    /* variant='full', khong phai 'thumb': api/admin.js:198 co y ghi 0 vao
-       w/h cua hang thumb va chi ghi so that vao hang full. Hai ban deu ve tu
-       cung mot bitmap voi cung phep thu nho theo ti le, nen TI LE cua chung
-       bang nhau, ma buc tuong chi can ti le. Doc tu 'full' con co cai loi la
-       nhung tam da upload truoc day deu dung duoc ngay, khong phai va lai
-       du lieu cu. */
+    /* Read dimensions from variant='full'. api/admin.js intentionally records
+       zero dimensions for 'thumb'. Both variants share the same aspect ratio,
+       and reading 'full' also works with previously uploaded rows. */
     " LEFT JOIN meme_blobs b ON b.slug = m.slug AND b.variant = 'full'" +
     where +
     ' ORDER BY m.sort ASC, m.id ASC';

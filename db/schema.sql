@@ -1,16 +1,16 @@
 -- $ZECAT site database. Cloudflare D1 (SQLite).
 --
--- Áp dụng (chạy từ thư mục site/):
+-- Apply from the site/ directory:
 --   wrangler d1 execute zecat --remote --file=./db/schema.sql
 --   wrangler d1 execute zecat --remote --file=./db/seed.sql
 --
--- Chạy lại được nhiều lần: mọi thứ đều IF NOT EXISTS.
+-- Safe to run repeatedly: every table and index uses IF NOT EXISTS.
 
 PRAGMA foreign_keys = ON;
 
 -- ---------------------------------------------------------------------------
--- memes: thư viện ảnh của site.
--- slug khớp với site/public/meme/<slug>.jpg và site/public/thumb/<slug>.jpg
+-- memes: the site's image library.
+-- A slug matches public/meme/<slug>.jpg and public/thumb/<slug>.jpg.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS memes (
   id         INTEGER PRIMARY KEY,
@@ -21,22 +21,22 @@ CREATE TABLE IF NOT EXISTS memes (
   credit     TEXT,
   featured   INTEGER NOT NULL DEFAULT 0 CHECK (featured IN (0, 1)),
   sort       INTEGER NOT NULL DEFAULT 0,
-  -- 1 = ảnh nằm trong D1 (upload qua khu quản trị), phục vụ bởi /api/meme-image
-  -- 0 = ảnh nằm trong repo tại public/meme/<slug>.jpg
+  -- 1 = image uploaded to D1 and served through /api/meme-image
+  -- 0 = image stored in the repository under public/meme/<slug>.jpg
   stored     INTEGER NOT NULL DEFAULT 0 CHECK (stored IN (0, 1)),
   created_at TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 
--- thứ tự hiển thị mặc định của lưới ảnh
+-- Default gallery order.
 CREATE INDEX IF NOT EXISTS idx_memes_sort     ON memes (sort);
--- lấy ba ảnh đầu trang
+-- Featured images first.
 CREATE INDEX IF NOT EXISTS idx_memes_featured ON memes (featured, sort);
--- lọc theo tab poster / scene / video
+-- Filter by poster, scene, or video tab.
 CREATE INDEX IF NOT EXISTS idx_memes_tag      ON memes (tag, sort);
 
 -- ---------------------------------------------------------------------------
--- posts: bài đã đăng trên X, dựng lại thành feed tĩnh trên site.
--- views để TEXT vì nó là nhãn hiển thị ('2.9k'), không phải số để tính toán.
+-- posts: published X posts reproduced in the site's static feed.
+-- views is TEXT because it is a display label (such as '2.9k').
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS posts (
   id        INTEGER PRIMARY KEY,
@@ -47,13 +47,13 @@ CREATE TABLE IF NOT EXISTS posts (
   pinned    INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0, 1))
 );
 
--- feed: bài ghim lên trước, còn lại mới nhất trước
+-- Show pinned posts first, then the newest remaining posts.
 CREATE INDEX IF NOT EXISTS idx_posts_feed   ON posts (pinned DESC, posted_at DESC);
 CREATE INDEX IF NOT EXISTS idx_posts_recent ON posts (posted_at DESC);
 
 -- ---------------------------------------------------------------------------
--- submissions: meme cộng đồng gửi lên, nằm ở 'pending' đến khi có người duyệt.
--- Không để UNIQUE trên url: hai người gửi trùng link là chuyện của moderator.
+-- submissions: community memes remain pending until a moderator reviews them.
+-- Duplicate URLs are allowed so moderators can review each submission.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS submissions (
   id         INTEGER PRIMARY KEY,
@@ -64,21 +64,20 @@ CREATE TABLE IF NOT EXISTS submissions (
   created_at TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 
--- hàng đợi duyệt: cũ nhất lên trước
+-- Review queue, oldest first.
 CREATE INDEX IF NOT EXISTS idx_submissions_queue ON submissions (status, created_at);
--- kiểm trùng link trước khi ghi
+-- Look up duplicate links before inserting.
 CREATE INDEX IF NOT EXISTS idx_submissions_url   ON submissions (url);
 
 -- ---------------------------------------------------------------------------
--- meme_blobs: byte của ảnh upload, base64.
+-- meme_blobs: base64-encoded uploaded image bytes.
 --
--- Vì sao ảnh nằm trong database thay vì một dịch vụ lưu trữ riêng: site này
--- đã dùng D1 rồi, và thêm R2 nghĩa là thêm một bucket, một API token, và một
--- thứ nữa phải nhớ gia hạn. Trình duyệt đã thu nhỏ và nén ảnh trước khi gửi
--- nên mỗi tấm chỉ vài chục KB. Với cỡ đó, một hàng trong SQLite là đủ.
+-- Images live in D1 because the browser resizes and compresses each image
+-- before upload. Each variant is small enough for a SQLite row, avoiding
+-- another storage service and another credential.
 --
--- Không có khóa ngoại tới memes: ảnh được ghi TRƯỚC hàng meme, để tường ảnh
--- không bao giờ hiện một ô trống.
+-- There is no foreign key to memes: image bytes are written before the meme
+-- row so the public gallery never points to a missing image.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS meme_blobs (
   slug       TEXT    NOT NULL,
@@ -92,18 +91,17 @@ CREATE TABLE IF NOT EXISTS meme_blobs (
 );
 
 -- ---------------------------------------------------------------------------
--- admin: đúng một hàng, giữ mật khẩu của khu quản trị.
+-- admin: one row containing the administrator's password verifier.
 --
--- Ở đây KHÔNG có mật khẩu. Chỉ có scrypt hash và salt của nó. Đặt hoặc đổi
--- mật khẩu bằng:
+-- No plaintext password is stored here, only a scrypt hash and salt.
+-- Set or change it with:
 --
 --   node tools/set-password.mjs
 --
--- Lệnh đó đọc mật khẩu từ bàn phím, không hiện lên màn hình, không ghi vào
--- lịch sử shell, và in ra đúng một câu lệnh SQL để dán vào wrangler.
+-- The tool reads a password without echoing it or storing it in shell history.
+-- It prints a Wrangler SQL command and, separately, a fresh ADMIN_SECRET.
 --
--- token_version: mỗi lần đổi mật khẩu thì số này tăng, và mọi phiên đang mở
--- trên máy khác chết ngay lập tức.
+-- Incrementing token_version after a password change invalidates old sessions.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS admin (
   id            INTEGER PRIMARY KEY CHECK (id = 1),
@@ -114,8 +112,8 @@ CREATE TABLE IF NOT EXISTS admin (
 );
 
 -- ---------------------------------------------------------------------------
--- NẾU database đã được tạo TRƯỚC khi có khu quản trị, chạy thêm một dòng này
--- một lần. Chạy trên database mới sẽ báo "duplicate column name", bỏ qua được.
+-- For a database created before the admin area, run this migration once.
+-- A new database already has this column and will report "duplicate column name".
 --
 --   wrangler d1 execute zecat --remote --command "ALTER TABLE memes ADD COLUMN stored INTEGER NOT NULL DEFAULT 0"
 -- ---------------------------------------------------------------------------

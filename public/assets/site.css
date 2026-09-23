@@ -1,28 +1,18 @@
 /* ===========================================================================
    $ZECAT design system
    ---------------------------------------------------------------------------
-   MAU. Moi gia tri duoi day deu lay tu bang 32 mau khoa trong
-   brand/CHARACTER.md muc 3. Khong them mau nao ngoai bang do.
+   COLOR. Values follow the locked palette in brand/CHARACTER.md section 3.
+   Gray means public exposure and is reserved for the transparent-funding stat.
 
-   Bon mau xam la mau danh rieng. Trong the gioi nay xam nghia la CONG KHAI,
-   bi phoi ra, nhin thau duoc. No chi xuat hien o dung mot cho tren trang:
-   phan "transparent" cua o thong ke nguon von.
+   TYPE. Archivo is for headings, IBM Plex Sans for body copy, IBM Plex Mono
+   for data and labels, and Silkscreen only for the hero ZECAT wordmark.
 
-   CHU. Ba ho, moi ho mot viec:
-     Archivo         tieu de. Grotesque cong nghiep, dac, khoe.
-     IBM Plex Sans   than bai.
-     IBM Plex Mono   moi con so, nhan, va ma.
-     Silkscreen      DUY NHAT chu ZECAT o hero. No la logo, khong phai font
-                     giao dien.
-
-   CHUYEN DONG. Bong luon la khoi dac lech di, ban kinh nhoe bang KHONG, y het
-   luat cua tranh. Khong quang, khong mo dan. Cai duoc phep dong la vi tri:
-   the nhac len, dong tien nghieng theo con tro, vach nhip chay. Tat ca deu
-   tat khi nguoi dung bat prefers-reduced-motion.
+   MOTION. Shadows remain hard edged. Only position changes: cards lift, the
+   coin tilts, and the chain pulse moves. Respect prefers-reduced-motion.
    =========================================================================== */
 
 :root{
-  /* nen va duong */
+  /* Backgrounds and borders. */
   --ink:#0A0705;
   --ink-2:#0F0C07;
   --panel:#12100A;
@@ -32,7 +22,7 @@
   --wood:#3A2A14;
   --wood-2:#4A3418;
 
-  /* vang va long meo */
+  /* Gold and cat fur. */
   --gold:#F0C558;
   --gold-2:#E8B23A;
   --gold-3:#D9A24A;
@@ -48,7 +38,7 @@
   --up:#F0C558;
   --down:#C4761C;
 
-  /* xam: chi cho thu bi phoi ra cong khai */
+  /* Gray is reserved for public exposure. */
   --glass:#8E939C;
 
   --maxw:1100px;
@@ -82,8 +72,8 @@ a{color:var(--gold);text-decoration:none}
 a:hover{color:var(--white)}
 :focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 img,video{max-width:100%;display:block}
-/* Moi <img> mang width/height that de chan giat khi tai. Khong co dong nay
-   thi chieu cao lay tu thuoc tinh HTML va anh bi keo meo. */
+/* Images have real width/height attributes to prevent layout shift. This
+   rule preserves aspect ratio when CSS constrains their width. */
 img{height:auto}
 code{font-family:var(--mono);font-size:.9em;color:var(--gold);background:var(--panel-2);padding:1px 6px}
 
@@ -92,8 +82,7 @@ h1,h2,h3{font-family:var(--display);font-weight:700;text-wrap:balance;margin:0;l
 .wrap{width:100%;max-width:var(--maxw);margin-inline:auto;padding-inline:var(--gutter)}
 
 .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
-/* Khi lay duoc focus thi phai NHIN THAY DUOC. Ghim fixed chu khong tra ve
-   static: .topbar la sticky, mot link static se truot len khuat sau header. */
+/* Keep the focused skip link visible above the sticky top bar. */
 .sr:focus,.sr:focus-visible{
   position:fixed;top:8px;left:8px;z-index:120;width:auto;height:auto;margin:0;
   clip:auto;overflow:visible;
@@ -131,8 +120,7 @@ h1,h2,h3{font-family:var(--display);font-weight:700;text-wrap:balance;margin:0;l
 .cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 
 /* --------------------------------------------------------------- header */
-/* Ghim tren cung va o nguyen do. Day la cho duy nhat nut mua di theo nguoi
-   doc, nen no phai on dinh chu khong duoc tu an hien. */
+/* Keep the only persistent buy button stable at the top of the page. */
 .topbar{
   position:sticky;top:env(safe-area-inset-top,0px);z-index:60;
   background:var(--ink-2);border-bottom:1px solid var(--line);
@@ -145,7 +133,7 @@ h1,h2,h3{font-family:var(--display);font-weight:700;text-wrap:balance;margin:0;l
 .nav a:hover{color:var(--gold);border-bottom-color:var(--gold)}
 .bar .btn{margin-left:auto;flex:none}
 
-/* Nhip 75 giay cua chain, chay that. */
+/* Live pulse follows the chain's nominal 75-second interval. */
 .pulse{height:2px;background:var(--line)}
 .pulse i{display:block;height:100%;width:100%;background:var(--gold);transform:scaleX(0);transform-origin:left center}
 
@@ -165,8 +153,7 @@ h1,h2,h3{font-family:var(--display);font-weight:700;text-wrap:balance;margin:0;l
 .facts dt{font-family:var(--mono);font-size:11px;letter-spacing:.09em;color:var(--muted)}
 .facts dd{margin:0;font-family:var(--mono);font-weight:500;font-size:15px;color:var(--text-hi);font-variant-numeric:tabular-nums}
 
-/* Dong tien nghieng theo con tro. Bong dac di theo cung huong, nen khoi hinh
-   van phang dung luat tranh, chi co goc nhin la doi. */
+/* The coin tilts with the pointer; its hard shadow follows the tilt. */
 .hero-art{margin:0;perspective:900px}
 .coin-frame{
   display:block;
@@ -191,8 +178,7 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 .head{margin-bottom:38px;max-width:68ch}
 .head h2{font-size:clamp(1.55rem,3.6vw,2.15rem);color:var(--text-hi)}
 .head .sub{color:var(--muted);margin:14px 0 0;max-width:60ch;font-size:15px}
-/* Doan dan truyen. To hon .sub vi no la cau chuyen chu khong phai chu thich,
-   va cau cuoi duoc lam sang len vi do la cho chu "first" dat chan xuong. */
+/* The story is larger than a caption; its final claim receives emphasis. */
 .story{margin:20px 0 0;max-width:62ch;font-size:16.5px;line-height:1.72;color:var(--text)}
 .story b{color:var(--gold);font-weight:600}
 
@@ -233,8 +219,7 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 .stat b{display:block;margin-top:7px;font-family:var(--mono);font-weight:600;font-size:17px;color:var(--text-hi);font-variant-numeric:tabular-nums}
 .stat b .muted{font-weight:400;font-size:13px}
 .stat.hi b{color:var(--gold)}
-/* Phan transparent cua o nguon von. Cho duy nhat tren trang dung mau xam,
-   va no dung nghia den: tien do da bi phoi ra cong khai. */
+/* Gray marks the transparent funding share as publicly exposed. */
 .stat .exposed{color:var(--glass);font-weight:400;font-size:13px}
 
 .chart-foot{display:flex;gap:8px 14px;flex-wrap:wrap;align-items:center;margin-top:16px;font-family:var(--mono);font-size:12px;color:var(--muted)}
@@ -247,17 +232,15 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 .card h3{font-size:17px;color:var(--gold);margin-bottom:10px}
 .card p{margin:0;font-size:15px;color:var(--text)}
 
-/* Duong thoi gian. Mot vach doc lien tuc, moi moc co nut tren vach va mot
-   ke ngang tach no khoi moc ke tiep. Cot ngay nam rieng ben trai de mat
-   khong phai tim. */
+/* Timeline markers share one vertical rule; dates sit in a separate column. */
 .tl{list-style:none;margin:0 0 22px;padding:0;border-top:1px solid var(--line-2)}
 .tl li{
   position:relative;display:grid;grid-template-columns:132px 1fr;gap:0 40px;
   padding:22px 0;border-bottom:1px solid var(--line-2);
 }
-/* vach doc, chay lien mach qua tat ca cac moc */
+/* Continuous vertical rule. */
 .tl li::before{content:"";position:absolute;left:150px;top:0;bottom:0;width:1px;background:var(--line-2)}
-/* nut tren vach */
+/* Marker on the rule. */
 .tl li::after{content:"";position:absolute;left:145px;top:27px;width:11px;height:11px;background:var(--ink);border:2px solid var(--gold-3)}
 .tl li.key::after{background:var(--gold);border-color:var(--gold)}
 
@@ -271,11 +254,8 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 .verify{margin:0;font-size:14px;color:var(--muted);max-width:64ch}
 
 /* ------------------------------------------------------------------ buy */
-/* Bon buoc, nen chi cho phep mot hoac hai cot. Voi minmax nho hon,
-   man hinh rong xep thanh ba cot va buoc thu tu ngoi mot minh o hang duoi.
-   min(430px,100%) chu khong phai 430px tran: minmax voi mot so tuyet doi lon
-   hon be ngang man hinh se ep ca cot rong ra va lam trang tran ngang tren
-   dien thoai. */
+/* Four steps use one or two columns. min(430px,100%) avoids a fixed minimum
+   wider than a phone viewport, which would cause horizontal overflow. */
 .guide{list-style:none;margin:0 0 28px;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(430px,100%),1fr));gap:18px;align-items:start}
 .g{
   border:1px solid var(--line-2);background:var(--panel);
@@ -289,7 +269,7 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 .g-body p{margin:0 0 13px;font-size:15px;color:var(--text)}
 .g-body p:last-child{margin-bottom:0}
 .g-body b{color:var(--text-hi);font-weight:600}
-/* Loi nhac, khong phai buoc. Tach ra bang mot vach doc chu khong bang mau. */
+/* A note, rather than a numbered step. */
 .g-note{font-size:13.5px;color:var(--muted);border-left:2px solid var(--gold-3);padding-left:13px}
 
 .chips{list-style:none;margin:0 0 13px;padding:0;display:flex;flex-wrap:wrap;gap:8px;font-family:var(--mono);font-size:13px}
@@ -305,16 +285,9 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 .warn{margin:0;border-left:3px solid var(--coral);padding:4px 0 4px 16px;font-size:15px;color:var(--text-hi);max-width:70ch}
 
 /* ---------------------------------------------------------------- memes */
-/* Buc tuong xep theo HANG NGANG, khong theo cot.
-   columns:3 cua CSS do anh chay doc het cot mot roi moi sang cot hai, nen
-   tam thu hai khong nam canh tam thu nhat ma nam DUOI no. Mat nguoi doc theo
-   hang, nen thu tu do sai ngay tu dau, va ba cot ket thuc o ba do cao khac
-   nhau nen day luoi luon le.
-   Bay gio: moi hang cao bang nhau, met phai thang, va khong cat anh mot pixel
-   nao vi be rong tung tam tinh tu ti le that cua no. Con so do site.js tinh,
-   ham justify(). CSS o day la trang thai truoc khi no chay, va la trang thai
-   duy nhat neu JS khong chay: van la mot buc tuong anh cao deu, chi khac la
-   met phai le. */
+/* Lay out the gallery by rows, preserving reading order. site.js justify()
+   uses each image's aspect ratio to align the right edge without cropping.
+   These rules also provide a readable layout when JavaScript is disabled. */
 .gallery{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
 .tile{
   flex:0 0 auto;height:200px;box-sizing:border-box;margin:0;position:relative;
@@ -322,11 +295,9 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
   overflow:hidden;font:inherit;color:inherit;line-height:0;
   transition:transform .14s var(--ease),box-shadow .14s var(--ease),border-color .14s var(--ease);
 }
-/* max-width:none de pha vong lap: img{max-width:100%} o tren tinh theo be
-   rong cua the, ma be rong cua the lai dang tinh theo img. */
+/* Avoid a sizing loop between the image and its width-by-content tile. */
 .tile img{height:100%;width:auto;max-width:none}
-/* Sau khi site.js can hang, moi tam co be rong va do cao rieng tinh san.
-   contain giu nguyen toan bo anh ke ca khi co sai so lam tron. */
+/* After JS lays out rows, contain preserves every pixel despite rounding. */
 .gallery.just .tile{height:auto}
 .gallery.just .tile img{width:100%;height:100%;object-fit:contain}
 .tile:hover,.tile:focus-visible{
@@ -336,8 +307,7 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 .tile[hidden]{display:none}
 .gallery-foot{margin-top:12px;font-family:var(--mono);font-size:12px;color:var(--muted)}
 
-/* Thanh chuyen trang cua tuong anh. Khong co JS thi no an va ca tuong hien
-   day du, nen trang van dung khi JS hong. */
+/* The pager stays hidden without JS while all gallery images remain visible. */
 .pager{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:20px}
 .pager[hidden]{display:none}
 .pager button{
@@ -350,9 +320,7 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 .pager button:disabled{opacity:.35;cursor:default}
 .pager .gap{font-family:var(--mono);font-size:12px;color:var(--muted);padding:0 3px}
 
-/* Clip 18 giay: khoi rieng phia tren buc tuong. Truoc day no nam lan trong
-   luoi, va vi no la thu duy nhat co thanh chu nen no luon cao hon moi tam
-   khac va lam hong hang. */
+/* Keep the 18-second clip above the gallery; its text would disrupt a row. */
 .clip{
   display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);
   margin:0 0 22px;border:1px solid var(--gold-3);background:var(--panel);
@@ -364,11 +332,11 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
   font-family:var(--display);font-weight:700;font-size:17px;color:var(--text-hi);
 }
 .clip-head i{font-style:normal;font-family:var(--mono);font-weight:400;font-size:11px;letter-spacing:.06em;color:var(--muted);flex:none}
-/* Mo ta bang chu cho clip. Nguoi khong nghe duoc van biet trong do co gi. */
+/* Text description gives access to the clip's content without audio. */
 .vidnote{margin:0;font-size:13px;color:var(--muted);line-height:1.65;max-width:58ch}
 
-/* ------------------------------------------------------ cua so timeline */
-/* Mot cot hep, giong cot timeline that, cuon trong long no. */
+/* ------------------------------------------------------- timeline window */
+/* Narrow, internally scrolling timeline column. */
 .tlwin{border:1px solid var(--line-2);background:var(--panel);max-width:620px;margin-inline:auto}
 .tlwin-bar{
   display:flex;align-items:center;gap:12px;padding:11px 14px;
@@ -380,7 +348,7 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
   font-size:10px;letter-spacing:.1em;color:var(--muted);
   border:1px solid var(--line-2);padding:2px 7px;
 }
-/* Chi doi sang vang khi timeline that da dung xong va DO duoc chieu cao. */
+/* Show gold only after the live timeline renders at measurable height. */
 .tlwin-state.on{color:var(--gold);border-color:var(--gold-3)}
 .tlwin-open{margin-left:auto;color:var(--gold);text-decoration:none;border-bottom:1px solid transparent}
 .tlwin-open:hover{border-bottom-color:var(--gold)}
@@ -389,12 +357,12 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 .tlwin-feed::-webkit-scrollbar-track{background:var(--ink-2)}
 .tlwin-feed::-webkit-scrollbar-thumb{background:var(--wood);border:2px solid var(--ink-2)}
 .tlwin-feed::-webkit-scrollbar-thumb:hover{background:var(--wood-2)}
-/* Rong thi khong chiem cho. Cung mot meo voi .xcard ben duoi. */
+/* Empty live containers occupy no space. */
 .tlwin-live:empty{display:none}
 .tlwin-live iframe{width:100% !important}
-/* Ban luu chi bien mat khi timeline that da thuc su ve ra thu gi do. */
+/* Hide the archive only after the live timeline renders. */
 .tlwin.live .posts{display:none}
-/* Trong cua so thi bai xep thanh mot cot, khong phai luoi. */
+/* Archive posts stack in one column inside the timeline. */
 .tlwin .posts{display:flex;flex-direction:column;gap:12px}
 
 /* ---------------------------------------------------------------- posts */
@@ -410,16 +378,13 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 .post .body{margin:14px 0 16px;font-size:15px;color:var(--text-hi);white-space:pre-line;flex:1}
 .post .go{font-family:var(--mono);font-size:12px;color:var(--gold-3)}
 .post:hover .go{color:var(--gold)}
-/* Khung X that duoc chen vao day. */
+/* X embeds mount in these containers. */
 .xcard{border:1px solid var(--line-2);background:var(--panel);overflow:hidden}
 .xcard iframe{max-width:100% !important}
-/* Chua co gi ben trong thi coi nhu khong ton tai. Nho dong nay, script cua X
-   ve xong luc nao thi the hien ra luc do, khong can hen gio, va X khong tra
-   loi thi cho nay tuyet doi khong de lai mot o vien rong. */
+/* An empty embed container stays invisible if X does not respond. */
 .xcard:empty{display:none}
-/* Khung X ve xong thi the tu viet ngay ben duoi bien mat, cung mot khung
-   hinh. Lam bang CSS vi widgets.js chen iframe truoc khi promise hoan tat,
-   va trong khoang do nguoi doc se thay ca hai ban. */
+/* Hide the local fallback when an iframe appears. widgets.js may insert the
+   iframe before its promise settles, so waiting for JS would show both. */
 .xcard:not(:empty) + .post{display:none}
 
 /* ---------------------------------------------------------------- rooms */
@@ -450,7 +415,7 @@ footer{border-top:1px solid var(--line);padding-block:var(--step) calc(var(--ste
   text-decoration:none;line-height:1.35;display:inline-block;
 }
 .lb button:hover,.lb .get:hover{border-color:var(--gold);color:var(--gold)}
-/* Tai ve la viec nguoi ta den day de lam, nen no la nut sang nhat trong hang. */
+/* Highlight the primary lightbox action, Download. */
 .lb .get{border-color:var(--gold-3);color:var(--gold)}
 .lb .get:hover{background:var(--gold);color:var(--ink)}
 
@@ -479,7 +444,7 @@ footer{border-top:1px solid var(--line);padding-block:var(--step) calc(var(--ste
   .seg{flex:1}
   .seg button{flex:1;text-align:center;padding:9px 8px}
   section{scroll-margin-top:70px}
-  /* Cot ngay xuong thanh mot dong rieng, vach doc bo di cho do chat. */
+  /* Move dates to their own row and remove the crowded vertical rule. */
   .tl li{grid-template-columns:1fr;gap:8px;padding:20px 0}
   .tl li::before,.tl li::after{display:none}
   .tl-when{text-align:left;flex-direction:row;gap:10px;align-items:baseline}
@@ -487,8 +452,7 @@ footer{border-top:1px solid var(--line);padding-block:var(--step) calc(var(--ste
 }
 
 /* --------------------------------------------------------- reduced motion */
-/* Nguoi dung da noi ho khong muon chuyen dong. Bo het: khong nghieng, khong
-   nhac, khong chay. Vach nhip dung o trang thai day va doi mau cho diu. */
+/* Respect reduced motion: no tilt, lift, or animated pulse. */
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   *,*::before,*::after{transition-duration:.01ms !important;animation-duration:.01ms !important}

@@ -1,24 +1,20 @@
 /**
- * POST /api/admin  —  toan bo khu quan tri, mot route, phan nhanh bang "action".
+ * POST /api/admin: all admin actions share one route and dispatch by "action".
  *
- * Gop lam mot vi moi hanh dong deu di qua dung mot cua: kiem tra ty le thu,
- * kiem tra phien, kiem tra CSRF. Tach thanh nam file la nam co hoi quen mot
- * trong ba buoc do.
+ * One route makes rate checks, session checks, and CSRF checks consistent.
  *
- *   action: "session"   con phien khong. Khong can dang nhap.
- *   action: "login"     { password }            -> dat cookie phien
- *   action: "logout"                            -> xoa cookie
- *   action: "password"  { current, next }       -> doi mat khau, huy moi phien
- *   action: "upload"    { slug,alt?,tag?,thumb,full,w,h } -> them meme
- *                       title va alt deu tuy chon. slug trung se tu doi ten.
- *   action: "remove"    { slug }                -> go mot meme da upload
+ *   action: "session"   Check session state; no sign-in required.
+ *   action: "login"     { password }             Set the session cookie.
+ *   action: "logout"                             Clear the cookie.
+ *   action: "password"  { current, next }        Change password and revoke sessions.
+ *   action: "upload"    { slug,alt?,tag?,thumb,full,w,h }  Add a meme.
+ *                       Title and alt are optional; duplicate slugs are renamed.
+ *   action: "remove"    { slug }                 Remove an uploaded meme.
  *
- * Anh duoc luu THANG VAO D1 dang base64. Khong dung thu vien anh nao ca:
- * trinh duyet da thu nho va nen anh truoc khi gui, nen server chi con viec
- * kiem tra va cat vao cho. Doi lai mot dich vu luu tru nua khong phai dung.
+ * Images are stored as base64 in D1. The browser resizes and compresses them;
+ * the server validates and stores the bytes without an image library.
  *
- * MOI phan hoi loi deu chung chung. Mot ke dang do khong can biet ho sai o
- * mat khau, o phien, hay o cau hinh.
+ * Error responses do not expose authentication or configuration details.
  */
 
 import { d1Query } from './_d1.js';
@@ -29,15 +25,14 @@ import {
   issueToken, setSessionCookie, clearSessionCookie,
 } from './_auth.js';
 
-/* Anh da duoc trinh duyet thu nho truoc khi gui. Hai tran nay chi de chan
-   mot yeu cau co tinh lam day database. */
+/* The browser compresses images first. These limits prevent oversized writes. */
 const MAX_THUMB_BYTES = 300 * 1024;
 const MAX_FULL_BYTES = 1200 * 1024;
 
 const SLUG = /^[a-z0-9][a-z0-9-]{1,48}$/;
 const TAG = /^[a-z][a-z-]{1,15}$/;
 
-/** Do dai mat khau toi thieu. Ngan hon thi scrypt cung khong cuu duoc. */
+/** Minimum new password length; scrypt cannot compensate for weak passwords. */
 const MIN_PASSWORD = 12;
 
 const fail = (response, code, error) => {
@@ -54,22 +49,21 @@ function readBody(request) {
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
 
 /**
- * Giai ma base64 va xac nhan day dung la mot tam JPEG.
- * Kiem tra byte dau thay vi tin vao ten hay content-type: ca hai deu do
- * nguoi gui tu dat.
+ * Decode base64 and verify the JPEG signature. A caller controls both the
+ * filename and Content-Type header, so neither proves the image format.
  */
 function decodeJpeg(b64, maxBytes) {
   if (typeof b64 !== 'string' || b64.length < 64) return null;
   let buf;
   try { buf = Buffer.from(b64, 'base64'); } catch { return null; }
   if (!buf.length || buf.length > maxBytes) return null;
-  /* SOI cua JPEG: FF D8 FF */
+  /* JPEG start-of-image marker: FF D8 FF. */
   if (buf[0] !== 0xff || buf[1] !== 0xd8 || buf[2] !== 0xff) return null;
   return buf;
 }
 
 // ---------------------------------------------------------------------------
-// tung hanh dong
+// Actions
 // ---------------------------------------------------------------------------
 
 async function doLogin(request, response, body) {
@@ -84,8 +78,7 @@ async function doLogin(request, response, body) {
 
   const row = await loadAdmin();
   if (!row) {
-    /* Chua ai dat mat khau. Noi ro, vi day la loi cau hinh cua chinh chu
-       trang chu khong phai mot dau vet huu ich cho nguoi la. */
+    /* No verifier exists yet. Report the setup error to the operator. */
     return fail(response, 503, 'No password has been set yet. Run tools/set-password.mjs.');
   }
 
@@ -131,17 +124,15 @@ async function doPassword(request, response, body) {
   );
 
   clearFailures(request);
-  /* Moi phien cu vua chet theo token_version. Cap lai the cho chinh may nay
-     de nguoi doi mat khau khong bi da ra ngoai. */
+  /* token_version revokes old sessions; issue a new token for this device. */
   const token = issueToken(version);
   if (token) setSessionCookie(response, token);
   response.status(200).end(JSON.stringify({ ok: true }));
 }
 
 /**
- * Doi mot slug bi trung thanh slug con trong: them -2, -3, ...
- * Can den no vi khu quan tri gio tha duoc mot luc nhieu anh, va ten file
- * trung nhau la chuyen binh thuong. Tra ve null neu thu het 50 lan.
+ * Resolve duplicate slugs with -2, -3, and so on. Batch uploads often
+ * contain duplicate filenames. Return null after 50 unsuccessful candidates.
  */
 async function freeSlug(base) {
   for (let i = 0; i < 50; i++) {
@@ -153,7 +144,7 @@ async function freeSlug(base) {
   return null;
 }
 
-/** "wanted-on-zcash" -> "Wanted on zcash". Chi de co cai ma goi trong D1. */
+/** "wanted-on-zcash" -> "Wanted on zcash" for a D1 display title. */
 function titleFromSlug(slug) {
   const words = slug.split('-').filter(Boolean).join(' ');
   return words ? words[0].toUpperCase() + words.slice(1) : slug;
@@ -167,10 +158,8 @@ async function doUpload(request, response, body) {
   if (!SLUG.test(wanted)) {
     return fail(response, 400, 'The file name has no usable letters or numbers in it.');
   }
-  /* Mo ta la TUY CHON. Truoc day no bat buoc, va dieu do dung cho mot tam
-     anh mot luc; voi mot lan tha hai muoi tam thi no bien thanh hai muoi o
-     trong phai dien. De trong thi de trong that, khong bia ra mot cau mo ta
-     gia, vi mot mo ta sai con te hon khong co. */
+  /* Description is optional for batch uploads. Preserve an empty description
+     rather than inventing misleading alt text. */
   if (alt.length > 300) return fail(response, 400, 'That description is too long.');
   if (!TAG.test(tag)) return fail(response, 400, 'Bad tag.');
 
@@ -181,17 +170,15 @@ async function doUpload(request, response, body) {
   const slug = await freeSlug(wanted);
   if (!slug) return fail(response, 409, 'Could not find a free name for that file.');
 
-  /* Cot title trong D1 la NOT NULL, va van huu ich khi tra cuu bang tay,
-     nen suy ra tu ten file thay vi bat nguoi dung go. No khong hien len
-     trang nua. */
+  /* D1 requires a title. Derive one from the filename when it was omitted. */
   const title = str(body.title) || titleFromSlug(slug);
 
   const w = Number(body.w) | 0;
   const h = Number(body.h) | 0;
   if (w < 1 || h < 1 || w > 8000 || h > 8000) return fail(response, 400, 'Bad image size.');
 
-  /* Anh vao truoc, hang meme vao sau. Neu buoc hai hong thi tuong anh khong
-     bao gio hien mot o trong: khong co hang thi khong co the. */
+  /* Store image bytes before the meme row so a failed insert cannot leave a
+     visible gallery tile without an image. */
   for (const [variant, buf] of [['thumb', thumb], ['full', full]]) {
     await d1Query(
       'INSERT OR REPLACE INTO meme_blobs (slug, variant, mime, w, h, data) VALUES (?, ?, ?, ?, ?, ?)',
@@ -215,8 +202,7 @@ async function doUpload(request, response, body) {
 async function doRemove(request, response, body) {
   const slug = str(body.slug).toLowerCase();
   if (!SLUG.test(slug)) return fail(response, 400, 'Bad name.');
-  /* Chi go duoc thu da upload qua day. Anh nam trong repo khong dung den
-     database, nen khong co duong nao xoa nham chung tu man hinh nay. */
+  /* Only D1 uploads can be removed here. Repository images stay untouched. */
   const rows = await d1Query('SELECT stored FROM memes WHERE slug = ?', [slug]);
   if (!rows.length) return fail(response, 404, 'No meme by that name.');
   if (Number(rows[0].stored) !== 1) {
@@ -234,8 +220,7 @@ async function doRemove(request, response, body) {
 export default async function handler(request, response) {
   noStore(response);
 
-  /* Thieu khoa ky hoac thieu D1 thi khu nay khong ton tai. Dong cua khi
-     hong, khong mo cua khi hong. */
+  /* Disable admin when the signing key or D1 is unavailable. */
   if (!adminEnabled()) return fail(response, 503, 'Not available.');
 
   if (!sameOriginPost(request)) {
@@ -248,7 +233,7 @@ export default async function handler(request, response) {
   const action = str(body.action);
 
   try {
-    /* hai hanh dong khong doi hoi phien */
+    /* These actions do not require an existing session. */
     if (action === 'login') return await doLogin(request, response, body);
     if (action === 'logout') {
       clearSessionCookie(response);
@@ -259,7 +244,7 @@ export default async function handler(request, response) {
       return response.status(200).end(JSON.stringify({ ok: true, signedIn: Boolean(who) }));
     }
 
-    /* tat ca phan con lai doi hoi mot phien con hieu luc */
+    /* All remaining actions require a valid session. */
     const who = await requireAdmin(request);
     if (!who) return fail(response, 401, 'Sign in first.');
 
@@ -269,8 +254,7 @@ export default async function handler(request, response) {
 
     return fail(response, 400, 'Unknown action.');
   } catch (err) {
-    /* Khong bao gio tra chi tiet loi ra ngoai: thong bao cua D1 co the mang
-       ten bang, ten cot, hoac mot phan cau lenh. */
+    /* D1 errors may include table names or SQL fragments; never expose them. */
     console.error('admin route failed:', err && err.message);
     return fail(response, 500, 'Something went wrong.');
   }

@@ -1,19 +1,16 @@
 /* ===========================================================================
-   test-admin.mjs  ·  chay thu toan bo luong xac thuc cua khu quan tri
+   test-admin.mjs  -  exercise the admin authentication flow
    ---------------------------------------------------------------------------
-       npm i -g better-sqlite3      (mot lan)
+       npm i -g better-sqlite3      (once)
        node tools/test-admin.mjs
 
-   Khong can Cloudflare, khong can mang. Bai thu dung mot D1 GIA chay tren
-   sqlite trong bo nho, noi dung giao thuc /query that cua Cloudflare, roi goi
-   thang cac handler trong api/ y het cach Vercel goi chung.
+   No Cloudflare account or network is needed. An in-memory SQLite database
+   emulates Cloudflare's /query response and invokes the real API handlers.
 
-   Chay lai bai nay sau MOI lan sua api/_auth.js hay api/admin.js. Doan ma xac
-   thuc la cho duy nhat trong du an ma mot loi im lang co the mo cua cho nguoi
-   la, va mat khong nhin ra duoc dieu do.
+   Run after every change to api/_auth.js or api/admin.js. Authentication
+   mistakes can silently expose the admin area.
 
-   Mat khau dung trong bai thu duoc sinh ngau nhien moi lan chay. Mat khau that
-   cua chu trang khong nam o day, va khong duoc phep nam o day.
+   Test passwords are generated each run. Never put the real password here.
    =========================================================================== */
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
@@ -31,7 +28,7 @@ const Database = req(path.join(globalRoot, 'better-sqlite3'));
 const db = new Database(':memory:');
 db.exec(readFileSync(path.join(SITE, 'db/schema.sql'), 'utf8'));
 
-/* ---- D1 gia: nhan {sql, params}, tra ve hinh dang y het Cloudflare ---- */
+/* ---- Fake D1: accept {sql, params}, return Cloudflare's response shape ---- */
 const d1 = createServer((r, res) => {
   let body = '';
   r.on('data', (c) => (body += c));
@@ -65,13 +62,13 @@ const { default: adminHandler } = await import(mod(path.join(SITE, 'api/admin.js
 const { default: imageHandler } = await import(mod(path.join(SITE, 'api/meme-image.js')));
 const { hashPassword, newSalt } = await import(mod(path.join(SITE, 'api/_auth.js')));
 
-/* ---- dat mat khau thu, KHONG phai mat khau that cua chu trang ---- */
+/* ---- Set a test password, never the operator's real password ---- */
 const TEST_PASSWORD = 'correct-horse-battery-staple-' + Math.random().toString(36).slice(2);
 const salt = newSalt();
 db.prepare('INSERT INTO admin (id, pass_hash, pass_salt, token_version, updated_at) VALUES (1,?,?,1,?)')
   .run(hashPassword(TEST_PASSWORD, salt), salt, new Date().toISOString());
 
-/* ---- goi handler y het Vercel ---- */
+/* ---- Invoke handlers as Vercel does ---- */
 let cookieJar = '';
 function call(handler, { method = 'POST', body = null, headers = {}, query = {}, ip = '10.0.0.1' } = {}) {
   return new Promise((resolve) => {
@@ -106,93 +103,92 @@ const post = (data, opts) => call(adminHandler, {
 let pass = 0, fail = 0;
 const check = (name, cond, detail) => {
   if (cond) { pass++; console.log('  ok    ' + name); }
-  else { fail++; console.log('  LOI   ' + name + (detail ? '  -> ' + detail : '')); }
+  else { fail++; console.log('  FAIL  ' + name + (detail ? '  -> ' + detail : '')); }
 };
 
-console.log('\n=== CUA VAO ===');
+console.log('\n=== ENTRY GATE ===');
 {
   const r = await call(adminHandler, { method: 'GET', headers: { 'x-zecat-admin': '1' } });
-  check('GET bi tu choi', r.status === 405, 'status ' + r.status);
+  check('GET is rejected', r.status === 405, 'status ' + r.status);
 }
 {
   const r = await post({ action: 'session' }, { headers: {} });
-  check('thieu header x-zecat-admin thi bi chan (CSRF)', r.status === 405, 'status ' + r.status);
+  check('missing x-zecat-admin header is rejected (CSRF)', r.status === 405, 'status ' + r.status);
 }
 {
   const r = await call(adminHandler, {
     body: { action: 'session' },
     headers: { 'x-zecat-admin': '1', 'content-type': 'text/plain' },
   });
-  check('content-type khong phai json thi bi chan', r.status === 405, 'status ' + r.status);
+  check('non-JSON Content-Type is rejected', r.status === 405, 'status ' + r.status);
 }
 
-console.log('\n=== DANG NHAP ===');
+console.log('\n=== SIGN-IN ===');
 {
   const r = await post({ action: 'session' });
-  check('chua dang nhap thi signedIn=false', r.json && r.json.signedIn === false);
+  check('signedIn is false before sign-in', r.json && r.json.signedIn === false);
 }
 {
   const r = await post({ action: 'upload', slug: 'x', title: 'x', alt: 'x'.repeat(20) });
-  check('upload khi chua dang nhap bi tu choi 401', r.status === 401, 'status ' + r.status);
+  check('upload without sign-in returns 401', r.status === 401, 'status ' + r.status);
 }
 {
-  const r = await post({ action: 'login', password: 'sai-be-bet' });
-  check('mat khau sai bi tu choi', r.status === 401);
-  check('loi khong noi ro sai o dau', r.json && r.json.error === 'Wrong password.', JSON.stringify(r.json));
+  const r = await post({ action: 'login', password: 'definitely-wrong' });
+  check('wrong password is rejected', r.status === 401);
+  check('error does not expose internal details', r.json && r.json.error === 'Wrong password.', JSON.stringify(r.json));
 }
 {
   const r = await post({ action: 'login', password: TEST_PASSWORD });
-  check('mat khau dung thi vao duoc', r.status === 200 && r.json.ok === true, JSON.stringify(r.json));
+  check('correct password signs in', r.status === 200 && r.json.ok === true, JSON.stringify(r.json));
   const c = String(r.headers['set-cookie'] || '');
-  check('cookie co HttpOnly', /HttpOnly/i.test(c), c);
-  check('cookie co Secure', /Secure/i.test(c), c);
-  check('cookie co SameSite=Strict', /SameSite=Strict/i.test(c), c);
+  check('cookie has HttpOnly', /HttpOnly/i.test(c), c);
+  check('cookie has Secure', /Secure/i.test(c), c);
+  check('cookie has SameSite=Strict', /SameSite=Strict/i.test(c), c);
 }
 {
   const r = await post({ action: 'session' });
-  check('sau khi dang nhap thi signedIn=true', r.json && r.json.signedIn === true);
+  check('signedIn is true after sign-in', r.json && r.json.signedIn === true);
 }
 
-console.log('\n=== KHOA SAU NHIEU LAN DOAN ===');
+console.log('\n=== FAILED-ATTEMPT LOCKOUT ===');
 {
   const saved = cookieJar; cookieJar = '';
   let locked = false;
   for (let i = 0; i < 9; i++) {
-    const r = await post({ action: 'login', password: 'lai-sai' }, { ip: '10.0.0.99' });
+    const r = await post({ action: 'login', password: 'wrong-again' }, { ip: '10.0.0.99' });
     if (r.status === 429) { locked = true; break; }
   }
-  check('doan sai nhieu lan thi bi khoa 429', locked);
+  check('repeated wrong guesses trigger 429', locked);
   const r = await post({ action: 'login', password: TEST_PASSWORD }, { ip: '10.0.0.99' });
-  check('dang bi khoa thi mat khau DUNG cung khong vao duoc', r.status === 429, 'status ' + r.status);
+  check('lockout also blocks the correct password', r.status === 429, 'status ' + r.status);
   cookieJar = saved;
 }
 
-console.log('\n=== GIA MAO X-FORWARDED-FOR ===');
+console.log('\n=== SPOOFED X-FORWARDED-FOR ===');
 const cookieBeforeXff = cookieJar;
-/* Hai duong nay tung mo that. Bo dem lay chang DAU cua x-forwarded-for, ma
-   chang do do nguoi goi tu dat. Xem ghi chu o clientKey trong api/_auth.js. */
+/* Trusting the caller-controlled first XFF hop enabled both attacks below.
+   See clientKey in api/_auth.js. */
 {
-  /* 1. Ke la gui dia chi THAT cua chu trang de khoa chu trang ra ngoai. */
+  /* 1. Spoof the owner's address to lock the owner out. */
   const saved = cookieJar; cookieJar = '';
   const VICTIM = '198.51.100.9';
   for (let i = 0; i < 8; i++) {
-    await post({ action: 'login', password: 'sai-' + i },
+    await post({ action: 'login', password: 'wrong-' + i },
       { headers: { 'x-zecat-admin': '1', 'x-forwarded-for': VICTIM, 'x-real-ip': '203.0.113.200' } });
   }
-  /* Chu trang den tu chinh dia chi do, voi mat khau DUNG. */
+  /* The owner connects from that address with the correct password. */
   const r = await post({ action: 'login', password: TEST_PASSWORD },
     { headers: { 'x-zecat-admin': '1', 'x-real-ip': VICTIM } });
-  check('ke la khong khoa duoc chu trang bang XFF gia', r.status === 200,
+  check('spoofed XFF cannot lock out the owner', r.status === 200,
     'status ' + r.status + ' ' + JSON.stringify(r.json));
   cookieJar = saved;
 }
 {
-  /* 2. Doi chang dau moi lan de tron bo dem. Chang cuoi va x-real-ip van la
-        cua ke do, nen den lan thu bay phai bi khoa. */
+  /* 2. Rotate the first XFF hop; the trusted address must still hit lockout. */
   cookieJar = '';
   let locked = false;
   for (let i = 0; i < 12; i++) {
-    const r = await post({ action: 'login', password: 'doan-' + i }, {
+    const r = await post({ action: 'login', password: 'guess-' + i }, {
       headers: {
         'x-zecat-admin': '1',
         'x-forwarded-for': '1.2.3.' + i + ', 203.0.113.44',
@@ -201,31 +197,30 @@ const cookieBeforeXff = cookieJar;
     });
     if (r.status === 429) { locked = true; break; }
   }
-  check('doi XFF lien tuc van bi khoa', locked);
+  check('rotating XFF still triggers lockout', locked);
 }
 {
-  /* 3. Khong co x-real-ip thi phai lay chang CUOI cua XFF, khong phai chang dau. */
+  /* 3. Without x-real-ip, use the last XFF hop rather than the first. */
   cookieJar = '';
   let locked = false;
   for (let i = 0; i < 12; i++) {
-    const r = await post({ action: 'login', password: 'doan-' + i },
+    const r = await post({ action: 'login', password: 'guess-' + i },
       { headers: { 'x-zecat-admin': '1', 'x-forwarded-for': '9.9.9.' + i + ', 203.0.113.77' } });
     if (r.status === 429) { locked = true; break; }
   }
-  check('thieu x-real-ip thi chang cuoi cua XFF duoc dung', locked);
+  check('last XFF hop is used without x-real-ip', locked);
 }
 
-/* Ba bai tren co xoa cookie de thu tung dia chi rieng. Tra lai phien cua
-   chu trang truoc khi di tiep, neu khong moi bai sau deu truot vi mat phien
-   va ta se tuong nham la code hong. */
+/* The spoofing cases cleared cookies; restore the owner session before
+   testing authenticated actions below. */
 cookieJar = cookieBeforeXff;
 
-console.log('\n=== THE PHIEN GIA ===');
+console.log('\n=== FORGED SESSION ===');
 {
   const saved = cookieJar;
-  cookieJar = 'zc_admin=' + Buffer.from(JSON.stringify({ v: 1, exp: 9e9 })).toString('base64url') + '.giaMao';
+  cookieJar = 'zc_admin=' + Buffer.from(JSON.stringify({ v: 1, exp: 9e9 })).toString('base64url') + '.forged';
   const r = await post({ action: 'session' });
-  check('the tu che khong ky dung thi khong duoc chap nhan', r.json && r.json.signedIn === false);
+  check('incorrectly signed token is rejected', r.json && r.json.signedIn === false);
   cookieJar = saved;
 }
 
@@ -234,127 +229,125 @@ const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(
 const NOT_JPEG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47]), Buffer.alloc(9000, 7)]).toString('base64');
 {
   const r = await post({ action: 'upload', slug: 'Bad Slug!', title: 'x', alt: 'a'.repeat(20), thumb: JPEG, full: JPEG, w: 10, h: 10 });
-  check('slug ban bi tu choi', r.status === 400);
+  check('invalid slug is rejected', r.status === 400);
 }
 {
-  /* Mo ta la tuy chon tu khi khu quan tri cho tha nhieu anh mot luc. De
-     trong thi de trong that, khong bia ra mot cau mo ta gia. */
+  /* Blank descriptions remain blank; batch uploads must not invent alt text. */
   const r = await post({ action: 'upload', slug: 'no-alt', alt: '', thumb: JPEG, full: JPEG, w: 10, h: 10 });
-  check('alt de trong van upload duoc', r.status === 200, JSON.stringify(r.json));
+  check('blank alt can still upload', r.status === 200, JSON.stringify(r.json));
   const row = db.prepare('SELECT alt, title FROM memes WHERE slug=?').get('no-alt');
-  check('alt luu thanh chuoi rong chu khong phai chu bia', row && row.alt === '', JSON.stringify(row));
-  check('title tu suy ra tu ten file', row && row.title === 'No alt', JSON.stringify(row));
+  check('blank alt is stored as an empty string', row && row.alt === '', JSON.stringify(row));
+  check('title is derived from filename', row && row.title === 'No alt', JSON.stringify(row));
 }
 {
   const r = await post({ action: 'upload', slug: 'long-alt', alt: 'a'.repeat(400), thumb: JPEG, full: JPEG, w: 10, h: 10 });
-  check('alt qua dai bi tu choi', r.status === 400);
+  check('oversized alt is rejected', r.status === 400);
 }
 {
   const r = await post({ action: 'upload', slug: 'fake-png', title: 'Title', alt: 'a'.repeat(20), thumb: NOT_JPEG, full: NOT_JPEG, w: 10, h: 10 });
-  check('file khong phai JPEG bi tu choi du doi duoi', r.status === 400, JSON.stringify(r.json));
+  check('non-JPEG content is rejected despite filename', r.status === 400, JSON.stringify(r.json));
 }
 {
   const big = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(2 * 1024 * 1024, 1)]).toString('base64');
   const r = await post({ action: 'upload', slug: 'too-big', title: 'Title', alt: 'a'.repeat(20), thumb: JPEG, full: big, w: 10, h: 10 });
-  check('anh qua lon bi tu choi', r.status === 400);
+  check('oversized image is rejected', r.status === 400);
 }
 {
   const r = await post({ action: 'upload', slug: 'test-meme', title: 'Test meme', alt: 'A description long enough', tag: 'scene', thumb: JPEG, full: JPEG, w: 800, h: 600 });
-  check('upload hop le thi thanh cong', r.status === 200 && r.json.ok === true, JSON.stringify(r.json));
+  check('valid upload succeeds', r.status === 200 && r.json.ok === true, JSON.stringify(r.json));
   const row = db.prepare('SELECT slug, stored, alt FROM memes WHERE slug=?').get('test-meme');
-  check('hang meme duoc ghi voi stored=1', row && row.stored === 1, JSON.stringify(row));
+  check('meme row has stored=1', row && row.stored === 1, JSON.stringify(row));
   const blobs = db.prepare('SELECT variant FROM meme_blobs WHERE slug=?').all('test-meme');
-  check('hai ban anh duoc ghi', blobs.length === 2, JSON.stringify(blobs));
+  check('both image variants are stored', blobs.length === 2, JSON.stringify(blobs));
 }
 {
-  /* Tha mot loat anh thi ten file trung nhau la chuyen binh thuong, nen may
-     chu tu them so thay vi bat nguoi dung doi ten tung tam. */
+  /* Batch uploads can share filenames; the server resolves duplicate slugs. */
   const r = await post({ action: 'upload', slug: 'test-meme', alt: '', thumb: JPEG, full: JPEG, w: 10, h: 10 });
-  check('slug trung thi tu doi ten', r.status === 200 && r.json.slug === 'test-meme-2',
+  check('duplicate slug is renamed', r.status === 200 && r.json.slug === 'test-meme-2',
     JSON.stringify(r.json));
   const r2 = await post({ action: 'upload', slug: 'test-meme', alt: '', thumb: JPEG, full: JPEG, w: 10, h: 10 });
-  check('lan thu ba thanh -3', r2.status === 200 && r2.json.slug === 'test-meme-3',
+  check('third duplicate receives -3', r2.status === 200 && r2.json.slug === 'test-meme-3',
     JSON.stringify(r2.json));
   const all = db.prepare("SELECT COUNT(*) n FROM memes WHERE slug LIKE 'test-meme%'").get();
-  check('ba hang rieng biet trong D1', all.n === 3, JSON.stringify(all));
+  check('three separate D1 rows exist', all.n === 3, JSON.stringify(all));
 }
 
-console.log('\n=== PHUC VU ANH ===');
+console.log('\n=== IMAGE DELIVERY ===');
 {
   const r = await call(imageHandler, { method: 'GET', query: { slug: 'test-meme', v: 'thumb' } });
-  check('anh tra ve 200', r.status === 200, 'status ' + r.status);
-  check('dung content-type', r.headers['content-type'] === 'image/jpeg');
-  check('co cache immutable', String(r.headers['cache-control']).includes('immutable'));
-  check('dung byte JPEG', Buffer.isBuffer(r.body) && r.body[0] === 0xff && r.body[1] === 0xd8);
+  check('image returns 200', r.status === 200, 'status ' + r.status);
+  check('image has correct Content-Type', r.headers['content-type'] === 'image/jpeg');
+  check('image has immutable caching', String(r.headers['cache-control']).includes('immutable'));
+  check('image returns JPEG bytes', Buffer.isBuffer(r.body) && r.body[0] === 0xff && r.body[1] === 0xd8);
 }
 {
   const r = await call(imageHandler, { method: 'GET', query: { slug: '../../etc/passwd', v: 'thumb' } });
-  check('slug di nguoc duong dan bi tu choi', r.status === 400);
+  check('path-traversal slug is rejected', r.status === 400);
 }
 {
-  const r = await call(imageHandler, { method: 'GET', query: { slug: 'khong-co', v: 'full' } });
-  check('anh khong ton tai tra 404', r.status === 404);
+  const r = await call(imageHandler, { method: 'GET', query: { slug: 'missing-image', v: 'full' } });
+  check('missing image returns 404', r.status === 404);
 }
 
-console.log('\n=== DOI MAT KHAU ===');
+console.log('\n=== PASSWORD CHANGE ===');
 const NEW_PASSWORD = 'another-long-passphrase-' + Math.random().toString(36).slice(2);
 {
-  const r = await post({ action: 'password', current: 'sai', next: NEW_PASSWORD });
-  check('mat khau hien tai sai thi khong doi duoc', r.status === 401);
+  const r = await post({ action: 'password', current: 'wrong', next: NEW_PASSWORD });
+  check('wrong current password cannot change it', r.status === 401);
 }
 {
-  const r = await post({ action: 'password', current: TEST_PASSWORD, next: 'ngan' });
-  check('mat khau moi qua ngan bi tu choi', r.status === 400);
+  const r = await post({ action: 'password', current: TEST_PASSWORD, next: 'short' });
+  check('short new password is rejected', r.status === 400);
 }
 const oldCookie = cookieJar;
 {
   const r = await post({ action: 'password', current: TEST_PASSWORD, next: NEW_PASSWORD });
-  check('doi mat khau thanh cong', r.status === 200 && r.json.ok === true, JSON.stringify(r.json));
+  check('password change succeeds', r.status === 200 && r.json.ok === true, JSON.stringify(r.json));
   const row = db.prepare('SELECT token_version FROM admin WHERE id=1').get();
-  check('token_version tang len', row.token_version === 2, JSON.stringify(row));
+  check('token_version increments', row.token_version === 2, JSON.stringify(row));
 }
 {
   const saved = cookieJar;
   cookieJar = oldCookie;
   const r = await post({ action: 'session' });
-  check('phien cu tren may khac bi da ra ngoai', r.json && r.json.signedIn === false);
+  check('old session on another device is invalid', r.json && r.json.signedIn === false);
   cookieJar = saved;
 }
 {
   const r = await post({ action: 'session' });
-  check('may vua doi mat khau van con dang nhap', r.json && r.json.signedIn === true);
+  check('device changing the password stays signed in', r.json && r.json.signedIn === true);
 }
 {
   cookieJar = '';
   const a = await post({ action: 'login', password: TEST_PASSWORD }, { ip: '10.0.0.5' });
-  check('mat khau CU khong con dung duoc', a.status === 401);
+  check('old password no longer works', a.status === 401);
   const b = await post({ action: 'login', password: NEW_PASSWORD }, { ip: '10.0.0.5' });
-  check('mat khau MOI dung duoc', b.status === 200, JSON.stringify(b.json));
+  check('new password works', b.status === 200, JSON.stringify(b.json));
 }
 
-console.log('\n=== KHONG CO KHOA KY THI TAT HAN ===');
+console.log('\n=== FAIL CLOSED WITHOUT SIGNING KEY ===');
 {
   const secret = process.env.ADMIN_SECRET;
   delete process.env.ADMIN_SECRET;
   const r = await post({ action: 'login', password: NEW_PASSWORD });
-  check('thieu ADMIN_SECRET thi dong cua, khong mo cua', r.status === 503, 'status ' + r.status);
+  check('missing ADMIN_SECRET disables admin', r.status === 503, 'status ' + r.status);
   process.env.ADMIN_SECRET = secret;
 }
 
-console.log('\n=== GO MEME ===');
+console.log('\n=== REMOVE MEME ===');
 {
   await post({ action: 'login', password: NEW_PASSWORD }, { ip: '10.0.0.7' });
   db.prepare("INSERT INTO memes (slug,title,alt,tag,sort,stored) VALUES ('in-repo','R','desc long enough','scene',5,0)").run();
   const r = await post({ action: 'remove', slug: 'in-repo' });
-  check('khong go duoc anh nam trong repo', r.status === 400, JSON.stringify(r.json));
+  check('repository image cannot be removed here', r.status === 400, JSON.stringify(r.json));
   const r2 = await post({ action: 'remove', slug: 'test-meme' });
-  check('go duoc anh da upload', r2.status === 200, JSON.stringify(r2.json));
+  check('uploaded image can be removed', r2.status === 200, JSON.stringify(r2.json));
   const other = db.prepare("SELECT COUNT(*) n FROM memes WHERE slug IN ('test-meme-2','test-meme-3')").get();
-  check('go mot tam khong dung den nhung tam da doi ten', other.n === 2, JSON.stringify(other));
+  check('removing one image preserves renamed siblings', other.n === 2, JSON.stringify(other));
   const left = db.prepare('SELECT COUNT(*) n FROM meme_blobs WHERE slug=?').get('test-meme');
-  check('byte anh cung bi xoa theo', left.n === 0);
+  check('removed image bytes are deleted', left.n === 0);
 }
 
-console.log('\n' + (fail === 0 ? 'TAT CA ' + pass + ' PHEP THU DEU QUA' : pass + ' qua, ' + fail + ' LOI'));
+console.log('\n' + (fail === 0 ? 'ALL ' + pass + ' TESTS PASSED' : pass + ' passed, ' + fail + ' failed'));
 d1.close();
 process.exit(fail === 0 ? 0 : 1);

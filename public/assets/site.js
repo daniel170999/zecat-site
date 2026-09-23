@@ -374,9 +374,8 @@
   /* -------------------------------------------------------- the gallery */
   let visible = [];
 
-  /* Buc tuong la mot buc tuong anh, khong phai mot danh sach the co ten.
-     Khong con bo loc, khong con chu duoi moi tam. Cai duy nhat con lai la
-     data-alt, vi nguoi dung trinh doc man hinh van phai biet trong anh co gi. */
+  /* The gallery has no visible filters or captions. Keep data-alt so screen
+     readers can still describe each image. */
   function collect() {
     visible = $$('.gallery .tile').map((el) => ({ el, slug: el.dataset.slug }));
     const foot = $('#gallery-count');
@@ -384,13 +383,11 @@
     relayout();
   }
 
-  /* Do cao mong muon cua mot hang, theo be rong cho co. Tren dien thoai la
-     ba tam mot hang, gan dung cach moi thu vien anh tren dien thoai lam. */
+  /* Target row height varies with width; phones show about three images. */
   const rowTarget = (w) => (w < 460 ? 118 : w < 700 ? 150 : w < 1000 ? 185 : 215);
 
-  /* Ti le that cua mot tam. The width/height tren <img> co ngay tu byte dau
-     tien cua trang, con naturalWidth chi co sau khi anh tai xong. Chua biet
-     gi thi tam coi la vuong, va ham nay duoc goi lai khi anh tai xong. */
+  /* Read intrinsic aspect ratio. HTML dimensions are available before load;
+     naturalWidth arrives later. Unknown images start as squares and relayout. */
   function ratioOf(tile) {
     const img = tile.querySelector('img');
     if (!img) return 1;
@@ -401,32 +398,26 @@
   }
 
   /**
-   * Xep anh thanh nhung hang cao bang nhau, met phai thang.
+   * Make rows approximately equal in height with aligned right edges.
    *
-   * Voi moi hang: gom anh vao den khi be rong tu nhien vuot qua cho, roi
-   * chia lai do cao sao cho tong be rong dung bang cho con lai. Vi be rong
-   * tinh tu ti le that, khong tam nao bi cat.
+   * Within each row, calculate widths from real aspect ratios so no image
+   * is cropped, then fit the combined width to the available space.
    *
-   * Tren desktop, chia deu so anh giua cac hang de hang cuoi khong bi hut
-   * mot khoang rong. Neu buc tuong chi co vai anh thi khong phong chung len
-   * qua lon chi de lap kin mot hang.
+   * On desktop, group by total aspect ratio, not image count. Avoid inflating
+   * a short last row merely to fill its width.
    */
   let laidOutAt = -1;
 
   function justify() {
     const wall = $('.gallery');
     if (!wall) return;
-    /* Chi nhung tam dang hien. Tam o trang khac mang thuoc tinh hidden,
-       va xep ca chung vao thi moi hang se tinh nham be rong. */
+    /* Exclude tiles hidden by pagination from row calculations. */
     const tiles = $$('.tile:not([hidden])', wall);
     if (!tiles.length) return;
 
-    /* getBoundingClientRect lam tron xuong, clientWidth lam tron len. Lay
-       ban nho hon, neu khong thi tong be rong co the vuot cho mot phan pixel
-       va tam cuoi cua hang bi day xuong hang duoi. */
+    /* Round container width down; fractional overflow can wrap the last tile. */
     const box = Math.floor(wall.getBoundingClientRect().width);
-    /* Khi phan tu dang an, trinh duyet bao be rong bang khong. Xep luc do se
-       ra mot hang dai vo nghia, nen bo qua va cho lan sau. */
+    /* Defer layout while the container has no measurable width. */
     if (box < 80) return;
 
     const gap = parseFloat(getComputedStyle(wall).columnGap) || 12;
@@ -438,9 +429,8 @@
     const ratioSum = (g) => g.reduce((a, t) => a + t.r, 0);
 
     /**
-     * Dat mot hang: moi tam cao bang nhau, tong be rong dung bang cho.
-     * stretch = false cho phep hang ngan hon target neu keo cho day se lam
-     * no cao qua muc, tranh mot hang cuoi cao gap ruoi cac hang tren.
+     * Give a row equal tile heights and the available combined width.
+     * A non-stretched short row may remain narrower to avoid oversized tiles.
      */
     const place = (g, stretch) => {
       if (!g.length) return;
@@ -452,8 +442,7 @@
       let used = 0;
       g.forEach((t, i) => {
         const last = i === g.length - 1;
-        /* Don toan bo sai so lam tron vao tam cuoi, nen tong luon khop tuyet
-           doi voi be rong cho va khong tam nao bi day xuong hang duoi. */
+        /* Put rounding residue in the last tile to prevent row wrapping. */
         const w = (fill && last) ? Math.max(1, avail - used) : Math.max(1, Math.round(t.r * h));
         used += w;
         t.el.style.width = w + 'px';
@@ -463,9 +452,8 @@
 
     const items = tiles.map((el) => ({ el, r: ratioOf(el) }));
 
-    /* Dien thoai: ba tam mot hang, giong moi thu vien anh tren dien thoai.
-       Neu chia ba ma du dung MOT tam thi hai hang cuoi thanh 2 va 2, khong
-       de mot tam le loi nam mot minh o day tuong. */
+    /* On phones, use three per row. Split a four-image tail as 2+2 rather
+       than leaving one image alone at the bottom. */
     if (mobile) {
       const groups = [];
       for (let i = 0; i < items.length; i += 3) groups.push(items.slice(i, i + 3));
@@ -478,19 +466,11 @@
       return;
     }
 
-    /* Chon SO HANG truoc, roi chia sao cho TONG TI LE moi hang bang nhau.
-
-       Ba cach deu tung thu va hai cach dau deu hong:
-       - Chia deu SO LUONG anh: hang toan anh doc co tong ti le nho nen phai
-         keo that cao moi lap day be, do cao nhay tu 133 len 207.
-       - Goi tham theo be rong roi can lai hai hang cuoi: chin hang dau rat
-         deu, nhung hai hang cuoi bi day len 230 so voi 170, thanh mot bac
-         thang o day tuong.
-       - Cach nay: do cao mot hang ti le nghich voi tong ti le cua no, nen
-         muon moi hang cao bang nhau thi phai cho moi hang cung mot tong ti
-         le. Chia tong ti le cho so hang la ra dinh muc, roi dong hang ngay
-         khi them tam ke tiep se lam no lech xa dinh muc hon la dung lai.
-         Moi hang deu day va deu cao xap xi nhau. */
+    /* Choose the number of rows, then balance their TOTAL ASPECT RATIOS.
+       Equal image counts made portrait-heavy rows 74px taller in testing;
+       greedy width packing left a large step at the end. Row height varies
+       inversely with ratio sum, so target the same ratio sum per row. Close
+       each row when adding the next image would move farther from that target. */
     const totalRatio = ratioSum(items);
     const rowCount = Math.max(1, Math.round(totalRatio / (box / target)));
     const perRow = totalRatio / rowCount;
@@ -511,13 +491,9 @@
     groups.forEach((g, i) => place(g, i < groups.length - 1));
   }
 
-  /* Goi bao nhieu lan cung duoc, chi xep mot lan moi khung hinh.
-     Hen bang CA requestAnimationFrame LAN setTimeout, va cai nao chay truoc
-     thi thang. Ly do: requestAnimationFrame khong chay khi tab dang an. Neu
-     chi hen bang no thi mo site o mot tab nen se de co "queued" ket lai o
-     true vinh vien, va tu do moi lan goi relayout deu tro ve ngay lap tuc,
-     tuc la buc tuong khong bao gio duoc xep lai nua. Day khong phai gia
-     thiet: da bat duoc dung the trong khung xem thu. */
+  /* Schedule with BOTH requestAnimationFrame and setTimeout; whichever runs
+     first wins. rAF may never run in a background tab, leaving queued=true
+     forever and preventing any future layout. This was reproduced in preview. */
   let queued = false;
   function relayout() {
     if (queued) return;
@@ -531,9 +507,8 @@
     setTimeout(run, 250);
   }
 
-  /* ------------------------------------------------------- phan trang */
-  /* Muoi tam moi trang. Anh cang nhieu thi so trang tang, chu co moi trang
-     khong doi, nen tuong khong bao gio dai ra vo han. */
+  /* -------------------------------------------------------- pagination */
+  /* Ten images per page keeps the gallery's visible height bounded. */
   const PER_PAGE = 10;
   let page = 1;
 
@@ -545,9 +520,8 @@
   };
 
   /**
-   * Danh so trang can hien. Khi it trang thi hien het; khi nhieu thi hien
-   * trang dau, trang cuoi, va lan can trang hien tai, con lai thay bang dau
-   * ba cham. Khong co no thi den trang thu bon muoi thanh ca mot bang so.
+   * Show all page numbers for a short list. For a long list, keep the first,
+   * last, and neighbors of the current page, with gaps between them.
    */
   function pageList(pages, cur) {
     if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1);
@@ -601,8 +575,7 @@
 
     collect();
 
-    /* Chi keo man hinh khi nguoi dung tu bam doi trang. Khi lightbox tu doi
-       trang thi khong duoc keo, vi luc do ho dang nhin vao hop thoai. */
+    /* Scroll only after a pager click, never after lightbox navigation. */
     if (scrollUp) {
       const head = $('#memes .head');
       if (head) head.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -632,9 +605,8 @@
     idx = i;
     const m = visible[i];
 
-    /* visible gom TOAN BO tuong, khong chi trang dang mo, nen bam Next o
-       cuoi trang van di tiep sang tam dau trang sau. Nhay trang truoc khi
-       ve, de luc dong hop thoai con tra duoc con tro ve dung tam do. */
+    /* visible covers every page. Move to the target page before displaying
+       the next image so closing the lightbox can focus the correct tile. */
     const want = pageOf(m.el);
     if (want !== page) { page = want; paginate(false); }
     const img = $('#lb-img');
@@ -642,10 +614,8 @@
     img.src = src;
     img.alt = m.el.dataset.alt || '';
 
-    /* Nut tai ve. Ca hai duong nguon anh deu cung mot mien, nen thuoc tinh
-       download duoc ton trong va ten file la cai minh dat, khong phai
-       "meme-image" hay mot chuoi truy van. Tren dien thoai khong co bam
-       chuot phai, nen day la cach duy nhat de lay anh ve. */
+    /* Both image sources are same-origin, so download can specify a useful
+       filename instead of a route or query string. */
     const get = $('#lb-get');
     if (get) {
       get.href = src;
@@ -688,8 +658,7 @@
       else if (e.key === 'ArrowRight') step(1);
       else if (e.key === 'Tab') {
         /* keep focus inside the dialog while it is open */
-        /* 'button,a' chu khong chi 'button': nut tai ve la mot the neo, va
-           neu bay nay khong biet den no thi Tab nhay ra khoi hop thoai. */
+        /* Include anchors: the Download control is a link in the focus trap. */
         const f = $$('button,a', box);
         const first = f[0], last = f[f.length - 1];
         if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
@@ -698,16 +667,13 @@
     });
   }
 
-  /* --------------------------------------------------- cua so timeline */
+  /* ----------------------------------------------------- timeline window */
   /**
-   * Duong chinh cho muc POSTS: widget profile timeline cua X. No tu cap
-   * nhat, moi nhat len truoc, va khong ai phai sua trang nay nua.
+   * The X profile timeline is the live Posts source and updates itself.
    *
-   * Cai bay o day khong phai "widget co tai duoc khong" ma la "widget co VE
-   * ra gi khong". Do duoc: X van tao ra the iframe roi khong ve gi vao do,
-   * va luc ay iframe cao dung bang khong. Neu tin vao su co mat cua iframe
-   * ma an ban luu di thi khach nhin vao mot o trong. Nen o day DO chieu cao
-   * that, va ban luu chi bi an khi con so do du lon.
+   * An iframe existing does not prove it rendered. X can insert an empty
+   * zero-height frame. Measure its height and retain the readable archive
+   * until the live content is visibly present.
    */
   function timeline() {
     const win = $('#tlwin');
@@ -719,12 +685,9 @@
     a.className = 'twitter-timeline';
     a.href = 'https://twitter.com/ZecatZcash';
     a.setAttribute('data-theme', 'dark');
-    /* KHONG them 'transparent' vao day. Da thu va no hong that:
-       transparent=true bao X dung ve nen, nhung X van to chu theo bang mau
-       TOI. Khung iframe roi ve nen mac dinh cua trinh duyet la TRANG, nen
-       ket qua la chu xam nhat tren nen trang, khong doc noi. Do duoc tren
-       production: tham so iframe co ca theme=dark lan transparent=true.
-       Bo transparent thi X tu ve nen toi cua no, va doc duoc. */
+    /* Do not add 'transparent'. With theme=dark and transparent=true, X kept
+       light text but omitted its dark background, leaving unreadable text on
+       the browser's white iframe background. This was measured in production. */
     a.setAttribute('data-chrome', 'noheader nofooter noborders');
     a.setAttribute('data-tweet-limit', '20');
     a.setAttribute('data-dnt', 'true');
@@ -733,13 +696,12 @@
 
     const draw = () => {
       if (!window.twttr || !window.twttr.widgets) return;
-      try { window.twttr.widgets.load(live); } catch (_) { /* thoi vay */ }
+      try { window.twttr.widgets.load(live); } catch (_) { /* Keep the archive. */ }
     };
     if (window.twttr && window.twttr.widgets) draw();
     else document.addEventListener('zecat:twttr', draw, { once: true });
 
-    /* Doi toi da 10 giay. Qua do thi coi nhu X khong tra loi, va ban luu o
-       lai dung cho cua no. */
+    /* Give X at most ten seconds before retaining the archive fallback. */
     let tries = 0;
     const check = () => {
       const f = live.querySelector('iframe');
@@ -770,8 +732,7 @@
     s.charset = 'utf-8';
 
     s.addEventListener('load', () => {
-      /* timeline() cho su kien nay. Dung chung mot the script, khong tai
-         widgets.js hai lan. */
+      /* Let timeline() reuse this widgets.js load instead of fetching twice. */
       document.dispatchEvent(new CustomEvent('zecat:twttr'));
       if (!window.twttr || !window.twttr.widgets) return;
       for (const card of cards) {
@@ -789,13 +750,10 @@
         host.className = 'xcard';
         card.parentNode.insertBefore(host, card);
 
-        /* Dong ho nay chay DOC LAP voi loi hua cua X, va do la diem mau chot.
-           Khi X chi nua voi, promise cua createTweet KHONG BAO GIO settle:
-           khong .then, khong .catch, nen moi phep don dep dat ben trong
-           chung deu khong bao gio chay. Da do duoc dung the: nam host cao
-           22px nam lai tren trang, va vi chung khong con :empty nen quy tac
-           css ben duoi an sach nam the viet tay. Muc POSTS thanh nam o
-           trong. Chieu cao la thu duy nhat noi that o day. */
+        /* Keep this timer OUTSIDE createTweet's promise. X sometimes inserts
+           a 22px placeholder without ever settling the promise. Cleanup in
+           .then() or .catch() would not run, and :empty would stop applying,
+           hiding the archive behind a blank frame. Height is the criterion. */
         let tries = 0;
         const settle = () => {
           if (host.getBoundingClientRect().height > 100) return;
@@ -845,12 +803,9 @@
     try { res = await getJSON('api/memes'); } catch (_) { return; }
     const rows = (res && res.data) || [];
     const have = new Set($$('.gallery .tile').map((t) => t.dataset.slug));
-    /* Sau tam "photo-N-2026-09-22-..." trong D1 chinh la ban upload dau tien
-       cua sau tam vua duoc nung vao repo voi ten that va mo ta that. Hang cu
-       van con trong D1; khong chan thi tuong hien chung mot lan nua, kem alt
-       text la chinh cai slug may sinh, vo nghia voi trinh doc man hinh.
-       Huong dan deploy co lenh xoa hang do khoi D1. Dong nay la chot an toan:
-       lenh do chay hay khong thi tuong van dung. */
+    /* Retire six temporary D1 uploads that are now bundled under proper
+       names and descriptions. This filter prevents duplicate images and
+       meaningless slug-based alt text even if the old D1 rows remain. */
     const RETIRED = /^photo-\d+-2026-09-22-01-05-47$/;
     const fresh = rows.filter((r) => r.slug && SLUG_OK.test(r.slug) && !have.has(r.slug) && !RETIRED.test(r.slug));
     if (!fresh.length) return;
@@ -860,15 +815,13 @@
       fig.setAttribute('role', 'button');
       fig.tabIndex = 0;
       fig.dataset.slug = r.slug;
-      /* van giu title va tag trong data-*: tools/sync-data.mjs doc chung, va
-         chung la thu ma D1 luu. Chi la khong hien ra man hinh nua. */
+      /* Keep title and tag in data attributes for sync-data and D1. */
       fig.dataset.title = r.title || r.slug;
       fig.dataset.tag = r.tag || 'scene';
       fig.dataset.alt = r.alt || '';
 
-      /* Hai duong nguon anh. Anh cu nam trong repo; anh upload qua khu
-         quan tri nam trong D1 va di qua /api/meme-image. Lightbox doc
-         data-full, nen no khong can biet anh den tu dau. */
+      /* Repository images and D1 uploads have different URLs. The lightbox
+         reads data-full without needing to know the storage source. */
       const inDb = Boolean(r.stored);
       const q = 'slug=' + encodeURIComponent(r.slug);
       fig.dataset.full = inDb ? 'api/meme-image?' + q + '&v=full' : 'meme/' + r.slug + '.jpg';
@@ -877,17 +830,14 @@
       img.src = inDb ? 'api/meme-image?' + q + '&v=thumb' : 'thumb/' + r.slug + '.jpg';
       img.alt = r.alt || '';
       img.loading = 'lazy';
-      /* Be rong va do cao that, lay tu D1. Co san hai so nay thi justify()
-         biet ti le truoc khi anh tai xong, nen buc tuong khong nhay mot cai
-         khi anh lan luot ve. Hang cu chua co hai so do thi bo trong, va
-         listener duoi day xep lai khi anh tai xong. */
+      /* D1 dimensions prevent layout shift before image loading. Older rows
+         without dimensions relayout when their images finish loading. */
       if (r.w > 0 && r.h > 0) {
         img.setAttribute('width', String(r.w));
         img.setAttribute('height', String(r.h));
       }
       img.addEventListener('load', relayout);
-      /* Mot hang co the vao D1 truoc khi anh kip len. Go the ra thay vi de
-         lai mot khung vo. */
+      /* Remove the tile if its D1 image is not available yet. */
       img.addEventListener('error', () => { fig.remove(); paginate(false); });
 
       fig.append(img);
@@ -954,13 +904,9 @@
   }
 
   /* ---------------------------------------------------------- admin door */
-  /* Mot cu nhan dup vao dong ky ten o chan trang. Khong co link, khong co
-     nut, khong co duong dan rieng de ai do do ra.
-
-     Cho ro rang: day KHONG phai bao mat. Doan ma nay cong khai nhu moi thu
-     khac trong file, nen ai chiu doc se thay. Thu that su chan nguoi la la
-     mat khau kiem tra o server cung voi gioi han so lan thu. Giau cua chi de
-     bot va nguoi to mo khong bao gio go den. */
+  /* A footer double-click opens the admin UI. This is only obscurity, not a
+     security boundary: this public script reveals the gesture. Server-side
+     authentication protects the route. */
   function adminDoor() {
     const mark = $('footer .sign');
     if (!mark) return;
@@ -973,12 +919,8 @@
     });
   }
 
-  /* Them anh xong thi keo lai tuong, khong phai tai lai trang.
-
-     Co thu lai vai lan chu khong goi dung mot lan. Hang vua ghi vao D1 khong
-     phai luc nao cung doc lai duoc ngay o lan hoi ke tiep, va khi do tuong
-     van dung yen trong khi khu quan tri da bao "xong". Vong lap nay dung
-     ngay khi thay slug moi xuat hien. */
+  /* Refresh the gallery after an upload without reloading. Retry briefly
+     because a new D1 row may not appear in the first follow-up response. */
   document.addEventListener('zecat:memes-changed', async (e) => {
     const want = e.detail && e.detail.slug;
     const here = () => !want || $$('.gallery .tile').some((t) => t.dataset.slug === want);
@@ -989,8 +931,7 @@
     }
   });
 
-  /* Doi be rong cua so, hoac quay ngang dien thoai, thi hang phai xep lai.
-     Anh tai xong sau khi trang da ve xong cung vay. */
+  /* Relayout after width changes, rotation, or late image loads. */
   if (window.ResizeObserver) {
     const wall = $('.gallery');
     if (wall) {

@@ -1,23 +1,21 @@
 /**
- * GET /api/chart  —  lich su gia cua $ZECAT, du de ve bieu do nen.
+ * GET /api/chart: $ZECAT price history for a candlestick chart.
  *
- * SHLD.fun khong tra ve nen (OHLC). No tra ve MOT dong gia cho MOI BLOCK co
- * giao dich. Route nay gom ca lich su do lai, chuan hoa don vi, va giao viec
- * gop thanh nen cho phia trinh duyet — nho vay doi khung thoi gian khong phai
- * goi mang lai.
+ * SHLD.fun returns one price row per traded block, not OHLC candles. This
+ * route normalizes the history; the browser builds candles so changing the
+ * time interval does not require another network request.
  *
- * Upstream (cong khai, khong can khoa):
- *   /zsa/api/price-history?asset=..&limit=2000&offset=..   gia theo block
- *   /zsa/api/health                                        tip height + gio
- *   /zsa/api/fills?asset=..&limit=500                      nguon von tung lenh
- *   /api/zec-usd                                           gia ZEC
+ * Public upstream APIs (no credentials):
+ *   /zsa/api/price-history?asset=..&limit=2000&offset=..   block prices
+ *   /zsa/api/health                                        chain tip and time
+ *   /zsa/api/fills?asset=..&limit=500                      funding source
+ *   /api/zec-usd                                           ZEC/USD rate
  *
- * VE THOI GIAN: chuoi du lieu khong mang moc thoi gian, chi mang so block.
- * Gio duoc suy ra tu tip: t(h) = tipTime - (tipHeight - h) * 75 giay. Zcash
- * nham 75 giay mot block nhung khong dung tuyet doi, nen truc thoi gian la
- * XAP XI. Giao dien phai noi ro dieu do thay vi lam nhu no chinh xac.
+ * The price rows have block heights, not timestamps. The chart estimates
+ * times from known anchors. Zcash targets 75 seconds per block, but real
+ * intervals vary, so the time axis is approximate and the UI says so.
  *
- * Env vars: KHONG. Khong dependency. Node 20, fetch toan cuc, ESM.
+ * No environment variables or npm dependencies. Node 20, global fetch, ESM.
  */
 
 const ASSET_ID = 'dbc23d99cf614e1146c1c49d8e94646227f71c59cb1c2ea3731ce264c48bc32a';
@@ -29,26 +27,24 @@ const FILLS_URL = BASE + '/zsa/api/fills';
 const ZEC_USD_URL = BASE + '/api/zec-usd';
 
 const ZAT = 1e8;
-/** mot lenh khop theo lo; day la so token trong mot lo. */
+/** Tokens per trading lot. */
 const LOT = 12500;
-/** nhip danh nghia cua Zcash, giay. Chi dung khi khong neo duoc hai dau. */
+/** Nominal Zcash block interval, used when both anchors are unavailable. */
 const BLOCK_SECONDS = 75;
 
 /**
- * Neo thu hai: giao dich dau tien cua $ZECAT.
- * Block 3.470.323, 2026-09-03 09:05:51 UTC — doc tren chain, ghi trong
- * research/zecat-token-dossier.md muc 2.2.
+ * Second time anchor: the first $ZECAT trade, at block 3,470,323 on
+ * 2026-09-03 09:05:51 UTC. See research/zecat-token-dossier.md section 2.2.
  *
- * Vi sao can den no: neu chi neo o tip roi lui lai 75 giay mot block thi sau
- * 20.000 block sai so don len gan hai tieng, va ca truc thoi gian lech. Noi
- * suy tuyen tinh giua hai diem da biet thi hai dau deu dung, va nhip block
- * that duoc tinh ra chu khong phai doan.
+ * Extrapolating backward from the tip at 75 seconds per block accumulates
+ * error. Interpolating between known endpoints preserves both anchors and
+ * measures the average block interval over this span.
  */
 const FIRST_HEIGHT = 3470323;
 const FIRST_TIME = '2026-09-03T09:05:51Z';
 
 const PAGE = 2000;
-/** tran so trang, de mot upstream hong khong keo route chay mai. */
+/** Bound pagination so an upstream fault cannot keep the route running. */
 const MAX_PAGES = 6;
 const FETCH_TIMEOUT_MS = 8000;
 const CACHE_TTL_MS = 60_000;
@@ -56,7 +52,7 @@ const CACHE_TTL_MS = 60_000;
 /** @type {{ body: object, expiresAt: number } | null} */
 let cache = null;
 
-/** Doc JSON, khong bao gio nem loi: het gio / loi mang / 4xx / rac deu ra null. */
+/** Return null on timeout, network error, non-2xx, or malformed JSON. */
 async function getJson(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -72,8 +68,8 @@ async function getJson(url) {
 }
 
 /**
- * Number(null) va Number('') deu bang 0, nen mot truong vang mat se bien
- * thanh mot con so that. Tra NaN de cong kiem tra o duoi chan lai.
+ * Number(null) and Number('') both equal zero. Return NaN for absent values
+ * so downstream validation cannot mistake missing data for a real zero.
  */
 function num(v) {
   if (typeof v === 'number') return Number.isFinite(v) ? v : NaN;
@@ -83,15 +79,15 @@ function num(v) {
 
 const finite = (n) => typeof n === 'number' && Number.isFinite(n);
 
-/** Chuoi tra ve co the la mang tran hoac boc trong { data: [...] }. */
+/** Accept either a bare array or a { data: [...] } response. */
 function toList(payload) {
   const list = payload && payload.data ? payload.data : payload;
   return Array.isArray(list) ? list : [];
 }
 
 /**
- * Keo het lich su, tung trang 2000 dong, cho toi khi upstream tra ve it hon
- * mot trang day. Tra null neu trang dau tien da hong — khong doan.
+ * Fetch up to MAX_PAGES of history, stopping on a short page. Return null
+ * when the first page fails rather than inventing a history.
  */
 async function loadHistory() {
   const rows = [];
@@ -108,11 +104,8 @@ async function loadHistory() {
 }
 
 /**
- * Doi tung dong thanh [block, gia, mua, ban].
- *   gia  ZEC cho mot lo 12.500 token
- *   mua  ZEC do vao block do
- *   ban  ZEC rut ra o block do
- * Dong nao thieu block hoac thieu gia thi bo, con hon la ve mot diem sai.
+ * Shape each row as [block, price, buy, sell]. Price is ZEC per 12,500-token
+ * lot; buy and sell are ZEC flows in that block. Discard incomplete rows.
  */
 function shape(rows) {
   const out = [];
@@ -129,15 +122,14 @@ function shape(rows) {
       finite(sell) ? Number(sell.toFixed(6)) : 0,
     ]);
   }
-  /* upstream tra ve moi nhat truoc; bieu do can cu nhat truoc */
+  /* Upstream is newest first; chart data must be oldest first. */
   out.sort((a, b) => a[0] - b[0]);
   return out;
 }
 
 /**
- * Dem nguon von cua cac lenh gan nhat.
- * Day la con so trung tam cua ca du an: bao nhieu phan tram nguoi mua tra
- * bang so du shielded. No doc duoc tu chain, khong phai tu loi quang cao.
+ * Count funding sources in recent fills. These chain-derived counts show
+ * shielded versus transparent funding rather than a marketing estimate.
  */
 function fundingMix(payload) {
   const list = toList(payload);
@@ -168,17 +160,16 @@ async function build() {
   const tipHeight = num(h && h.tipHeight);
   const tipTime = h && typeof h.lastSyncAt === 'string' ? h.lastSyncAt : null;
 
-  /* Khong co neo thoi gian thi khong the dung truc thoi gian that. Va khong
-     co diem nao thi khong co gi de ve. Ca hai truong hop deu tra ve ro rang
-     thay vi tra ve mot bieu do sai. */
+  /* Without a time anchor or enough points, report unavailable rather than
+     returning a misleading chart. */
   const usable = points.length > 1 && finite(tipHeight) && tipTime !== null;
 
   const zecUsd = num(
     (zecPayload && zecPayload.data && zecPayload.data.usd) ?? (zecPayload && zecPayload.usd),
   );
 
-  /* Nhip block that, tinh tu hai neo. Chi dung khi tip nam sau neo dau va
-     khoang cach du lon de con so co nghia. */
+  /* Measure seconds per block between the two anchors only when the tip is
+     sufficiently far beyond the first anchor. */
   const spanBlocks = finite(tipHeight) ? tipHeight - FIRST_HEIGHT : 0;
   const spanMs = tipTime ? Date.parse(tipTime) - Date.parse(FIRST_TIME) : NaN;
   const measured = spanBlocks > 1000 && finite(spanMs) && spanMs > 0
@@ -190,7 +181,7 @@ async function build() {
     source: usable ? 'live' : 'unavailable',
     anchorHeight: FIRST_HEIGHT,
     anchorTime: FIRST_TIME,
-    /** giay mot block, do tu hai neo. null thi phia trinh duyet dung 75. */
+    /** Measured seconds per block; null tells the browser to use 75. */
     measuredBlockSeconds: measured ? Number(measured.toFixed(3)) : null,
     takenAt: new Date().toISOString(),
     tipHeight: finite(tipHeight) ? tipHeight : null,
@@ -199,11 +190,11 @@ async function build() {
     lot: LOT,
     zecUsd: finite(zecUsd) && zecUsd > 0 ? zecUsd : null,
     funding: fundingMix(fills),
-    /** [block, ZEC mot lo, ZEC mua, ZEC ban], cu nhat truoc */
+    /** [block, ZEC per lot, ZEC bought, ZEC sold], oldest first. */
     points: usable ? points : [],
   };
 
-  /* Ban hong chi giu 10 giay, de indexer song lai la lay duoc ngay. */
+  /* Cache failures for only ten seconds so recovery is picked up quickly. */
   cache = { body, expiresAt: Date.now() + (usable ? CACHE_TTL_MS : 10_000) };
   return body;
 }
@@ -223,7 +214,7 @@ export default async function handler(request, response) {
   try {
     body = await build();
   } catch {
-    /* khong bao gio nem ra khoi handler */
+    /* Never throw out of the handler. */
     body = {
       ok: true, source: 'unavailable', takenAt: new Date().toISOString(),
       tipHeight: null, tipTime: null, blockSeconds: BLOCK_SECONDS, lot: LOT,

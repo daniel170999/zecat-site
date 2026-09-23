@@ -2,11 +2,13 @@ node_modules
 .vercel
 .env
 .env*.local
+.env.*
+!.env.example
+Credentials.txt
 .DS_Store
 Thumbs.db
 
-# wrangler giu bi mat cho moi truong cuc bo trong .dev.vars.
-# Mot lan commit nham file do la lo ca CF_API_TOKEN lan ADMIN_SECRET.
+# Wrangler stores local secrets in .dev.vars. Never commit them.
 .dev.vars
 .dev.vars.*
 .wrangler

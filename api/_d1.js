@@ -63,12 +63,10 @@ export async function d1Query(sql, params = []) {
     throw new Error('d1: not configured');
   }
 
-  /* CF_D1_ENDPOINT cho phep tro sang mot dau kia thay cho Cloudflare. Hai
-     cong dung: chay thu tai cho voi mot D1 gia, va tu dung mot proxy neu sau
-     nay can. Khong dat bien nay thi duong mac dinh la Cloudflare that.
-
-     Bien moi truong chi doc duoc boi nguoi da co quyen tren du an, nen day
-     khong mo them cua nao: ai dat duoc no thi da doi duoc ca CF_API_TOKEN. */
+  /* CF_D1_ENDPOINT overrides the Cloudflare API host for local tests or a
+     future trusted proxy. The default is Cloudflare's production API.
+     Only project administrators can set this environment variable; the same
+     access also permits changing CF_API_TOKEN. */
   const base = process.env.CF_D1_ENDPOINT || "https://api.cloudflare.com";
   const url =
     `${base}/client/v4/accounts/${accountId}` +

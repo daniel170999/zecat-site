@@ -1,17 +1,14 @@
 /* ===========================================================================
-   dev-server.mjs  ·  xem ca trang VA cac route api, ngay tren may
+   dev-server.mjs  -  serve the site and API routes locally
    ---------------------------------------------------------------------------
-       node tools/dev-server.mjs          mo o http://localhost:8099
-       node tools/dev-server.mjs 3000     doi cong
+       node tools/dev-server.mjs          open http://localhost:8099
+       node tools/dev-server.mjs 3000     use another port
 
-   Vi sao co file nay ben canh `npx vercel dev`: vercel dev bat dang nhap va
-   link project truoc khi chay dong nao. File nay khong can mang, khong can
-   tai khoan, khong co dependency, va goi thang cac handler trong api/ nen
-   /api/tape, /api/memes, /api/posts deu tra loi that.
+   Unlike `npx vercel dev`, this local server needs no login, linked project,
+   network access, or dependencies. It invokes the real api/ handlers.
 
-   Day CHI la may chu de thu. No khong bat chuoc header trong vercel.json,
-   khong bat chuoc CSP, va khong bat chuoc cache. Truoc khi push van phai xem
-   ban preview tren Vercel.
+   This is only a development server. It does not reproduce vercel.json
+   headers, CSP, or caching. Verify a Vercel preview before production.
    =========================================================================== */
 
 import { createServer } from 'node:http';
@@ -45,8 +42,7 @@ const TYPES = {
   '.woff2': 'font/woff2',
 };
 
-/* Handler trong api/ viet theo kieu Vercel: response.status(n).end(body).
-   Node khong co san hai ham do, nen boc them o day. */
+/* Adapt Node's response object to the Vercel handler interface. */
 function vercelShim(res) {
   res.status = (code) => { res.statusCode = code; return res; };
   res.json = (obj) => {
@@ -58,9 +54,8 @@ function vercelShim(res) {
 }
 
 /**
- * Doc than yeu cau va phan tich JSON, y het cach Vercel lam truoc khi goi
- * handler. Than rong hoac khong phai JSON thi tra ve undefined, dung nhu
- * Vercel, de handler tu quyet dinh do la loi hay khong.
+ * Parse JSON request bodies as Vercel does before invoking handlers. Empty
+ * or invalid JSON becomes undefined so each handler can decide the response.
  */
 function readJsonBody(request) {
   const method = (request.method || 'GET').toUpperCase();
@@ -69,7 +64,7 @@ function readJsonBody(request) {
     let raw = '';
     request.on('data', (c) => {
       raw += c;
-      /* tran an toan, xap xi gioi han than yeu cau cua Vercel */
+      /* Safety ceiling near Vercel's request-body limit. */
       if (raw.length > 5 * 1024 * 1024) { raw = ''; request.destroy(); resolve(undefined); }
     });
     request.on('end', () => {
@@ -94,12 +89,10 @@ const server = createServer(async (req, res) => {
       return res.end(JSON.stringify({ ok: false, error: 'no such route' }));
     }
     try {
-      /* them query moi lan de sua file xong khong phai khoi dong lai */
+      /* Bust the module cache so file edits work without a restart. */
       const mod = await import(pathToFileURL(join(apiDir, name + '.js')).href + '?t=' + Date.now());
       req.query = Object.fromEntries(url.searchParams.entries());
-      /* Vercel tu doc than JSON thanh request.body truoc khi goi handler.
-         Khong lam viec do o day thi moi route POST se thay than rong va tra
-         ve "Bad request", trong khi tren that no chay binh thuong. */
+      /* Vercel supplies parsed request.body; reproduce that for POST routes. */
       req.body = await readJsonBody(req);
       await mod.default(req, vercelShim(res));
     } catch (err) {
@@ -110,16 +103,16 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  /* ---- file tinh ---- */
+  /* ---- static files ---- */
   if (path === '/') path = '/index.html';
-  /* chan di nguoc len tren public/ */
+  /* Prevent traversal outside public/. */
   const safe = path.split('/').filter((p) => p && p !== '.' && p !== '..').join('/');
   let file = join(publicDir, safe);
 
   try {
     if ((await stat(file)).isDirectory()) file = join(file, 'index.html');
   } catch {
-    /* cleanUrls trong vercel.json: /faq cung phuc vu /faq.html */
+    /* Match cleanUrls: /faq also serves /faq.html. */
     try { await stat(file + '.html'); file += '.html'; }
     catch { res.statusCode = 404; return res.end('404 ' + path); }
   }
@@ -137,14 +130,14 @@ const server = createServer(async (req, res) => {
 
 server.on('error', (err) => {
   if (err && err.code === 'EADDRINUSE') {
-    console.error('cong ' + port + ' dang co thu khac dung. Thu: node tools/dev-server.mjs ' + (port + 1));
+    console.error('Port ' + port + ' is in use. Try: node tools/dev-server.mjs ' + (port + 1));
     process.exit(1);
   }
   throw err;
 });
 
 server.listen(port, () => {
-  console.log('site cua $ZECAT dang chay o  http://localhost:' + port);
-  console.log('  /api/tape   /api/memes   /api/posts   deu song');
-  console.log('  Ctrl+C de dung');
+  console.log('$ZECAT site running at http://localhost:' + port);
+  console.log('  /api/tape   /api/memes   /api/posts   available');
+  console.log('  Press Ctrl+C to stop');
 });

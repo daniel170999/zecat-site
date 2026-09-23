@@ -1,70 +1,57 @@
 /**
- * Lop xac thuc cho khu quan tri.  KHONG phai mot endpoint: ten file bat dau
- * bang "_" nen Vercel khong route no, chi co cac route khac import vao.
+ * Authentication for the admin area. This is not an endpoint: Vercel does not
+ * route files whose names start with "_"; other routes import this module.
  *
  * ---------------------------------------------------------------------------
- * NHUNG DIEU KHONG DUOC PHA
+ * SECURITY INVARIANTS
  *
- * 1. Mat khau KHONG BAO GIO nam trong ma nguon, trong repo, trong log, hay
- *    trong bat ky cau tra loi nao. Trong D1 chi co scrypt hash va salt. Dat
- *    mat khau bang `node tools/set-password.mjs`, lenh do doc tu ban phim va
- *    khong ghi mat khau ra dau ca.
+ * 1. Never put plaintext passwords in source, Git, logs, or responses. D1
+ *    stores only a scrypt hash and salt. The password setup tool reads from
+ *    the terminal without echoing or recording the password.
  *
- * 2. Kiem tra mat khau chi xay ra o SERVER. Cu chi mo bang tren trang chi de
- *    giau cua, khong phai de bao ve. Bat ky ai doc site.js deu thay cu chi
- *    do, va dieu do khong sao: thu chan ho la mat khau, khong phai su bi mat
- *    cua cai nut.
+ * 2. Verify passwords only on the server. The gesture that opens the admin
+ *    panel merely hides the UI; its source is public and offers no protection.
  *
- * 3. Thieu ADMIN_SECRET thi toan bo khu quan tri TAT. Dong cua khi hong, chu
- *    khong mo cua khi hong.
+ * 3. Without ADMIN_SECRET, disable the admin area. Fail closed.
  *
- * 4. So sanh hash bang timingSafeEqual. So sanh bang === de lo do dai trung
- *    khop qua thoi gian phan hoi.
+ * 4. Compare hashes with timingSafeEqual, not a regular equality operator.
  *
- * 5. Doi mat khau lam tang token_version, nen moi phien dang mo trên may
- *    khac deu chet ngay lap tuc.
+ * 5. Increment token_version on password changes to invalidate old sessions.
  * ---------------------------------------------------------------------------
  */
 
 import crypto from 'node:crypto';
 import { d1Query, d1Configured } from './_d1.js';
 
-/** ten cookie phien. Tien to zc_ de khong dung voi cookie cua ai khac. */
+/** Session cookie name; the zc_ prefix avoids collisions. */
 export const COOKIE = 'zc_admin';
 
-/** phien song bao lau, giay. 8 tieng, du mot buoi lam viec. */
+/** Session lifetime in seconds: eight hours. */
 const SESSION_SECONDS = 8 * 60 * 60;
 
-/** scrypt: N cang lon cang cham. 2^15 mat khoang 100ms tren lambda, du dat
- *  de do vet can mat khau ma van khong lam nguoi dung doi. */
+/** scrypt work factor. Keep the password setup tool and verifier aligned. */
 const SCRYPT = { N: 32768, r: 8, p: 1, keylen: 32, maxmem: 64 * 1024 * 1024 };
 
-/** cho phep bao nhieu lan doan sai truoc khi khoa, va khoa bao lau. */
+/** Failed attempts before a temporary lockout and its duration. */
 const MAX_TRIES = 6;
 const LOCK_MS = 15 * 60 * 1000;
 
-/* Bo dem so lan doan sai. Day la bo nho cua MOT lambda, nen no khong phai
-   mot hang rao hoan hao: Vercel co the chay nhieu ban song song va moi ban
-   dem rieng. No lam cham mot ke do mat khau di rat nhieu, va di kem voi
-   scrypt 100ms moi lan thu thi vet can tro nen vo nghia ve mat thoi gian.
-   Hang rao that van la do dai mat khau. */
+/* This counter is local to one serverless instance. Parallel instances have
+   separate counters, so this is not a global brute-force barrier. Password
+   strength remains necessary. */
 const tries = new Map();
 
 /**
- * Dia chi cua nguoi goi, dung lam khoa cho bo dem so lan doan sai.
+ * Derive a caller key for the failed-attempt counter.
  *
- * KHONG duoc lay chang DAU cua x-forwarded-for. Chang do do CHINH NGUOI GOI
- * dat, va tin vao no mo ra hai duong tan cong da duoc chay thu:
+ * Never trust the first x-forwarded-for hop: the caller can supply it. Doing
+ * so would allow both of these tested attacks:
  *
- *   1. Ke la gui x-forwarded-for bang dia chi THAT cua chu trang, doan sai
- *      sau lan, va chu trang bi khoa ra ngoai 15 phut. Sau yeu cau la du.
- *   2. Ke la doi chang dau moi lan gui, moi yeu cau trong nhu mot nguoi moi,
- *      va bo dem khong bao gio cham nguong.
+ *   1. Spoof the owner's address, fail six times, and lock the owner out.
+ *   2. Rotate that first hop to evade the failed-attempt counter.
  *
- * Quy uoc cua x-forwarded-for la moi proxy NOI THEM dia chi ma no nhan duoc
- * vao cuoi. Vay chang CUOI la chang gan minh nhat, va la chang duy nhat ma
- * nguoi goi khong viet duoc. x-real-ip thi do chinh Vercel dat va ghi de,
- * nen no la lua chon dau tien.
+ * Each proxy appends the address it received, making the last hop the closest
+ * trusted hop. Prefer x-real-ip when Vercel supplies it.
  */
 function clientKey(request) {
   const h = request.headers || {};
@@ -76,9 +63,8 @@ function clientKey(request) {
   const hops = fwd.split(',').map((x) => x.trim()).filter(Boolean);
   if (hops.length) return hops[hops.length - 1];
 
-  /* Khong xac dinh duoc ai thi gop tat ca vao mot khoa. Nghia la mot nguoi
-     doan sai co the lam cham nhung nguoi khac, nhung o mot trang mot nguoi
-     dung thi do la danh doi dung: tha chat con hon khong dem gi. */
+  /* Without a usable address, group callers under one key rather than
+     allowing unmetered guesses. */
   return 'unknown';
 }
 
@@ -107,20 +93,20 @@ export function clearFailures(request) {
 }
 
 // ---------------------------------------------------------------------------
-// mat khau
+// Password hashing
 // ---------------------------------------------------------------------------
 
 export function newSalt() {
   return crypto.randomBytes(16).toString('hex');
 }
 
-/** scrypt, tra ve hex. Dung cho ca luc dat mat khau va luc kiem tra. */
+/** Return the scrypt hash as hex for both setup and verification. */
 export function hashPassword(password, saltHex) {
   const salt = Buffer.from(saltHex, 'hex');
   return crypto.scryptSync(password, salt, SCRYPT.keylen, SCRYPT).toString('hex');
 }
 
-/** So sanh hai chuoi hex ma khong de lo do dai trung khop qua thoi gian. */
+/** Compare two hex hashes without leaking a matching prefix through timing. */
 export function sameHash(a, b) {
   const x = Buffer.from(String(a), 'hex');
   const y = Buffer.from(String(b), 'hex');
@@ -129,18 +115,18 @@ export function sameHash(a, b) {
 }
 
 // ---------------------------------------------------------------------------
-// the phien, ky bang HMAC
+// HMAC-signed session tokens
 // ---------------------------------------------------------------------------
 
 const b64u = (buf) => Buffer.from(buf).toString('base64url');
 
 function secret() {
   const s = process.env.ADMIN_SECRET;
-  /* Ngan khoa qua ngan. Mot khoa 8 ky tu khong ky duoc gi ca. */
+  /* Reject short signing keys. */
   return typeof s === 'string' && s.length >= 32 ? s : null;
 }
 
-/** Khu quan tri chi song khi CA HAI deu co: D1 de luu, va khoa de ky. */
+/** Require both D1 storage and a session-signing key for administration. */
 export function adminEnabled() {
   return Boolean(secret()) && d1Configured();
 }
@@ -202,7 +188,7 @@ export function clearSessionCookie(response) {
 }
 
 // ---------------------------------------------------------------------------
-// trang thai trong D1
+// D1 state
 // ---------------------------------------------------------------------------
 
 /** @returns {Promise<{pass_hash:string, pass_salt:string, token_version:number} | null>} */
@@ -212,8 +198,7 @@ export async function loadAdmin() {
 }
 
 /**
- * Cua chinh. Tra ve null khi khong hop le, va KHONG noi vi sao — mot ke dang
- * do tim khong can biet cai nao trong bon ly do da chan ho.
+ * Return null for invalid admin sessions without exposing the reason.
  */
 export async function requireAdmin(request) {
   if (!adminEnabled()) return null;
@@ -222,15 +207,14 @@ export async function requireAdmin(request) {
   let row;
   try { row = await loadAdmin(); } catch { return null; }
   if (!row) return null;
-  /* Doi mat khau tang token_version, nen the cu het gia tri ngay. */
+  /* A password change invalidates tokens with an earlier version. */
   if (Number(row.token_version) !== Number(claims.v)) return null;
   return { version: Number(row.token_version) };
 }
 
 /**
- * Chan CSRF. SameSite=Strict da chan phan lon, nhung mot header tu dat thi
- * trinh duyet chi gui duoc qua fetch cung nguon, khong gui duoc qua form
- * hay anh tu trang khac.
+ * CSRF defense. SameSite=Strict helps; the custom header also prevents a
+ * cross-origin HTML form or image from submitting an admin action.
  */
 export function sameOriginPost(request) {
   const h = request.headers || {};
@@ -240,7 +224,7 @@ export function sameOriginPost(request) {
   return ct.includes('application/json');
 }
 
-/** Moi phan hoi cua khu quan tri deu khong duoc luu lai o bat cu dau. */
+/** Prevent caches and indexers from retaining admin responses. */
 export function noStore(response) {
   response.setHeader('Cache-Control', 'no-store, private');
   response.setHeader('Content-Type', 'application/json; charset=utf-8');

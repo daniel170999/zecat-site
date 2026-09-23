@@ -1,23 +1,14 @@
 /* ===========================================================================
    $ZECAT admin console
    ---------------------------------------------------------------------------
-   File nay KHONG duoc tai cung trang. site.js chi keo no ve sau mot cu chi
-   an, nen khach binh thuong khong bao gio tai no.
+   site.js loads this file only after the hidden opening gesture. This is not
+   a security boundary: the public site.js reveals the gesture. The server
+   verifies the password and controls every decision; no secret lives here.
 
-   Dieu do KHONG phai la lop bao ve. Cu chi kia nam trong site.js ma ai cung
-   doc duoc. Cai chan nguoi la la mat khau duoc kiem tra o server, scrypt,
-   va gioi han so lan thu. Giau cua chi de bot va nguoi to mo khong go cua.
-
-   O day KHONG co mat khau, khong co khoa, khong co gi bi mat. Moi quyet dinh
-   deu do /api/admin dua ra.
-
-   Anh duoc thu nho NGAY TRONG TRINH DUYET truoc khi gui: mot ban 1400px va
-   mot ban 600px. Nho vay may chu khong can thu vien xu ly anh nao, va thu di
-   qua mang chi con vai chuc KB thay vi vai MB.
-
-   Tha bao nhieu tam mot luc cung duoc. Khong phai dat ten, khong phai go
-   tieu de: ten file thanh slug, slug trung thi may chu tu them so. O mo ta
-   la tuy chon, de trong thi de trong that chu khong bia ra mot cau gia.
+   The browser resizes images to 1400px and 600px variants before upload so
+   the server needs no image-processing library and transfers stay small.
+   Batch uploads derive slugs from filenames and resolve duplicates on the
+   server. Descriptions are optional; never invent one for an empty field.
    =========================================================================== */
 
 (() => {
@@ -132,7 +123,7 @@
   const panel = $('[data-panel]', root);
   const msg = $('[data-msg]', root);
   let lastFocus = null;
-  /* Hang doi anh dang cho gui. Moi phan tu:
+  /* Pending image queue. Each item contains:
      { file, slug, full, thumb, row, desc, state } */
   let queue = [];
 
@@ -147,19 +138,19 @@
     const res = await fetch('api/admin', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-zecat-admin': '1' },
-      /* cookie phien la httpOnly, trinh duyet tu gui kem */
+      /* The browser sends the HttpOnly session cookie automatically. */
       credentials: 'same-origin',
       body: JSON.stringify(Object.assign({ action }, data || {})),
     });
     let out = null;
-    try { out = await res.json(); } catch (_) { /* server tra ve rac */ }
+    try { out = await res.json(); } catch (_) { /* Invalid server response. */ }
     if (!res.ok || !out || out.ok !== true) {
       throw new Error((out && out.error) || 'That did not work.');
     }
     return out;
   }
 
-  /** Ve mot anh da giai ma xuong co mong muon, tra ve base64 khong co tien to. */
+  /** Draw a decoded image at the target size and return bare base64. */
   async function render(bmp, maxEdge) {
     const scale = Math.min(1, maxEdge / Math.max(bmp.width, bmp.height));
     const w = Math.max(1, Math.round(bmp.width * scale));
@@ -178,11 +169,8 @@
   }
 
   /**
-   * Giai ma anh MOT lan roi ve ca hai co tu cung mot bitmap.
-   * Ban truoc goi createImageBitmap hai lan cho moi file, tuc la giai ma mot
-   * tam 12 megapixel hai luot. Voi hai muoi hai tam thi do la hai muoi hai
-   * luot giai ma thua, va chinh no lam viec chuan bi lau den muc nguoi dung
-   * bam Upload truoc khi hang doi san sang.
+   * Decode each image once, then draw both sizes from that bitmap. Decoding
+   * twice made large batches slow enough to race the Upload button.
    */
   async function shrinkBoth(file) {
     const bmp = await createImageBitmap(file);
@@ -197,13 +185,11 @@
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48);
 
   /**
-   * Trang thai cua nut gui.
+   * Upload button state.
    *
-   * Khi CON tam nao dang thu nho thi nut bi khoa va hien so tien do. Ban
-   * truoc khong lam vay: nut sang len ngay khi mot tam dau tien xong, va
-   * nhan cua no dem dan. Tha hai muoi hai anh dien thoai roi bam luc no ghi
-   * "Upload 6 images" thi dung sau tam duoc gui, con muoi sau tam van dang
-   * thu nho. Do khong phai loi cua nguoi dung, do la nut moi ho bam som.
+   * Keep the button disabled until every queued image finishes resizing.
+   * Otherwise its count can understate a large batch and send only the files
+   * prepared so far.
    */
   function refreshButtons() {
     const sizing = queue.filter((q) => q.state === 'sizing').length;
@@ -221,21 +207,16 @@
   }
 
   /**
-   * Nhan mot loat file va xep vao hang doi. Moi tam duoc thu nho ngay trong
-   * trinh duyet thanh hai ban truoc khi gui, nen mot lan tha hai muoi tam
-   * van chi la vai tram KB len duong truyen.
+   * Queue a batch and resize every image to two variants in the browser.
    *
-   * Tung tam xu ly lan luot chu khong song song: hai muoi canvas cung luc
-   * lam treo tab tren may yeu.
+   * Process images sequentially to avoid many simultaneous canvases.
    */
   async function enqueue(files) {
     const list = [...files].filter((f) => f && /^image\//.test(f.type));
     if (!list.length) { say(msg, 'Those were not images.', 'bad'); return; }
     msg.hidden = true;
 
-    /* Dung DU hang truoc, roi moi thu nho tung tam.
-       Neu vua dung vua thu nho thi so tong trong nhan nut dem dan len, va
-       "Preparing 1 of 2" khi dang co hai muoi hai file la mot con so sai. */
+    /* Queue the entire batch before resizing so progress uses the true total. */
     const fresh = [];
     for (const file of list) {
       const item = {
@@ -272,9 +253,8 @@
         item.stateEl.className = 'q-state';
       } catch (err) {
         item.state = 'failed';
-        /* Noi RA ly do that. Ban truoc luon in mot cau chung chung, nen khi
-           mot loat anh hong thi khong ai biet vi sao, ke ca nguoi viet ra no.
-           Ly do hay gap: iPhone xuat HEIC ma trinh duyet khong giai ma duoc. */
+        /* Show the actual conversion error. HEIC from an iPhone is one common
+           format that a browser may fail to decode. */
         const why = (err && err.message) ? String(err.message) : String(err);
         item.stateEl.textContent = why.slice(0, 44);
         item.stateEl.title = why;
@@ -331,7 +311,7 @@
   $('#adm-pw', root).addEventListener('keydown', (e) => { if (e.key === 'Enter') signIn(); });
 
   $('[data-out]', root).addEventListener('click', async () => {
-    try { await call('logout'); } catch (_) { /* dang xuat thi khong the that bai */ }
+    try { await call('logout'); } catch (_) { /* Clear local UI regardless. */ }
     panel.hidden = true; gate.hidden = false;
     $('#adm-pw', root).focus();
   });
@@ -363,9 +343,8 @@
     refreshButtons();
   });
 
-  /* Gui lan luot chu khong song song. May chu ghi vao D1 tung hang mot va
-     tu doi ten khi slug trung, nen thu tu tuan tu giu cho viec doi ten do
-     doan duoc. Mot tam hong khong lam dung ca hang doi. */
+  /* Send sequentially for predictable duplicate-slug naming in D1. A failed
+     image does not stop the rest of the batch. */
   $('[data-send]', root).addEventListener('click', async () => {
     const btn = $('[data-send]', root);
     const todo = queue.filter((q) => q.state === 'ready');
@@ -402,8 +381,7 @@
       }
     }
 
-    /* Neu trong luc gui co them tam thu nho xong thi noi ro, thay vi de
-       nguoi dung tuong da xong het. */
+    /* Report files that finished preparing during the send loop. */
     const leftover = queue.filter((q) => q.state === 'ready').length;
     say(msg,
       done + (done === 1 ? ' image added' : ' images added') +
@@ -412,8 +390,7 @@
       failed ? 'bad' : 'good');
 
     if (last) {
-      /* site.js dang nghe. Gui kem slug cuoi cung de no cho den khi thay
-         dung tam do tren tuong, thay vi hoi mot lan roi thoi. */
+      /* site.js retries until the last uploaded slug appears in the gallery. */
       document.dispatchEvent(new CustomEvent('zecat:memes-changed', { detail: { slug: last } }));
     }
     refreshButtons();

@@ -1,15 +1,14 @@
 /**
- * GET /api/meme-image?slug=<ten>&v=thumb|full
+ * GET /api/meme-image?slug=<name>&v=thumb|full
  *
- * Tra ve mot tam anh da duoc upload qua khu quan tri. Anh nam trong D1 dang
- * base64; route nay giai ma va tra ve nguyen byte.
+ * Return an uploaded image. D1 stores base64; this route decodes and returns
+ * the original bytes.
  *
- * KHONG can dang nhap: tuong meme la noi dung cong khai, y het cac file trong
- * public/meme. Cai duy nhat rieng tu la duong upload, khong phai duong xem.
+ * Viewing images requires no sign-in because the gallery is public. Uploads
+ * still require admin authentication.
  *
- * Cache manh tay, vi mot slug luon tra ve dung mot tam anh: muon doi anh thi
- * doi ten. Nho vay CDN chan gan het luot doc va D1 chi bi goi mot lan moi
- * bien vung.
+ * Cache by slug for one year. Use a new slug when replacing an image so CDN
+ * caches never serve the wrong version.
  */
 
 import { d1Configured, d1Query } from './_d1.js';
@@ -17,7 +16,7 @@ import { d1Configured, d1Query } from './_d1.js';
 const SLUG = /^[a-z0-9][a-z0-9-]{1,48}$/;
 const VARIANTS = new Set(['thumb', 'full']);
 
-/** anh khong doi trong mot nam; slug moi la duong duy nhat de thay anh moi */
+/** Immutable for one year; use a new slug to publish a replacement. */
 const CACHE = 'public, max-age=31536000, immutable';
 
 function query(request) {
@@ -48,8 +47,7 @@ export default async function handler(request, response) {
   }
 
   if (!d1Configured()) {
-    /* Khong co D1 thi khong co anh nao kieu nay ton tai. 404 chu khong phai
-       500: ve phia nguoi goi, tam anh nay that su khong co. */
+    /* Without D1 this image does not exist; return 404 rather than 500. */
     response.status(404).end();
     return;
   }
@@ -79,8 +77,7 @@ export default async function handler(request, response) {
     return;
   }
 
-  /* Chi tra ve dung loai anh minh tu ghi luc upload. Khong bao gio lay
-     mime tu tham so cua nguoi goi. */
+  /* Use the stored MIME type, never one supplied by a caller. */
   const mime = row.mime === 'image/jpeg' ? 'image/jpeg' : 'application/octet-stream';
 
   response.setHeader('Content-Type', mime);
