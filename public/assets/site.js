@@ -416,7 +416,9 @@
   function justify() {
     const wall = $('.gallery');
     if (!wall) return;
-    const tiles = $$('.tile', wall);
+    /* Chi nhung tam dang hien. Tam o trang khac mang thuoc tinh hidden,
+       va xep ca chung vao thi moi hang se tinh nham be rong. */
+    const tiles = $$('.tile:not([hidden])', wall);
     if (!tiles.length) return;
 
     /* getBoundingClientRect lam tron xuong, clientWidth lam tron len. Lay
@@ -529,10 +531,88 @@
     setTimeout(run, 250);
   }
 
+  /* ------------------------------------------------------- phan trang */
+  /* Muoi tam moi trang. Anh cang nhieu thi so trang tang, chu co moi trang
+     khong doi, nen tuong khong bao gio dai ra vo han. */
+  const PER_PAGE = 10;
+  let page = 1;
+
+  const allTiles = () => $$('.gallery .tile');
+
+  const pageOf = (el) => {
+    const i = allTiles().indexOf(el);
+    return i < 0 ? page : Math.floor(i / PER_PAGE) + 1;
+  };
+
+  /**
+   * Danh so trang can hien. Khi it trang thi hien het; khi nhieu thi hien
+   * trang dau, trang cuoi, va lan can trang hien tai, con lai thay bang dau
+   * ba cham. Khong co no thi den trang thu bon muoi thanh ca mot bang so.
+   */
+  function pageList(pages, cur) {
+    if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1);
+    const out = [1];
+    const from = Math.max(2, cur - 1);
+    const to = Math.min(pages - 1, cur + 1);
+    if (from > 2) out.push('gap');
+    for (let i = from; i <= to; i++) out.push(i);
+    if (to < pages - 1) out.push('gap');
+    out.push(pages);
+    return out;
+  }
+
+  function paginate(scrollUp) {
+    const pager = $('#pager');
+    const tiles = allTiles();
+    if (!pager) return;
+
+    const pages = Math.max(1, Math.ceil(tiles.length / PER_PAGE));
+    if (page > pages) page = pages;
+    if (page < 1) page = 1;
+
+    tiles.forEach((el, i) => { el.hidden = Math.floor(i / PER_PAGE) + 1 !== page; });
+
+    pager.hidden = pages < 2;
+    pager.textContent = '';
+    if (pages > 1) {
+      const btn = (label, target, opts) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = label;
+        if (opts && opts.disabled) b.disabled = true;
+        if (opts && opts.current) b.setAttribute('aria-current', 'page');
+        if (opts && opts.label) b.setAttribute('aria-label', opts.label);
+        b.addEventListener('click', () => { page = target; paginate(true); });
+        pager.appendChild(b);
+      };
+      btn('Prev', page - 1, { disabled: page === 1, label: 'Previous page' });
+      for (const p of pageList(pages, page)) {
+        if (p === 'gap') {
+          const g = document.createElement('span');
+          g.className = 'gap';
+          g.textContent = '...';
+          pager.appendChild(g);
+          continue;
+        }
+        btn(String(p), p, { current: p === page, label: 'Page ' + p });
+      }
+      btn('Next', page + 1, { disabled: page === pages, label: 'Next page' });
+    }
+
+    collect();
+
+    /* Chi keo man hinh khi nguoi dung tu bam doi trang. Khi lightbox tu doi
+       trang thi khong duoc keo, vi luc do ho dang nhin vao hop thoai. */
+    if (scrollUp) {
+      const head = $('#memes .head');
+      if (head) head.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
   function gallery() {
     const wall = $('.gallery');
     if (!wall) return;
-    collect();
+    paginate(false);
     wall.addEventListener('click', (e) => {
       const t = e.target.closest('.tile');
       if (t) open(visible.findIndex((v) => v.el === t));
@@ -551,6 +631,12 @@
     if (box.hidden) lastFocus = document.activeElement;
     idx = i;
     const m = visible[i];
+
+    /* visible gom TOAN BO tuong, khong chi trang dang mo, nen bam Next o
+       cuoi trang van di tiep sang tam dau trang sau. Nhay trang truoc khi
+       ve, de luc dong hop thoai con tra duoc con tro ve dung tam do. */
+    const want = pageOf(m.el);
+    if (want !== page) { page = want; paginate(false); }
     const img = $('#lb-img');
     const src = m.el.dataset.full || ('meme/' + m.slug + '.jpg');
     img.src = src;
@@ -633,7 +719,13 @@
     a.className = 'twitter-timeline';
     a.href = 'https://twitter.com/ZecatZcash';
     a.setAttribute('data-theme', 'dark');
-    a.setAttribute('data-chrome', 'noheader nofooter noborders transparent');
+    /* KHONG them 'transparent' vao day. Da thu va no hong that:
+       transparent=true bao X dung ve nen, nhung X van to chu theo bang mau
+       TOI. Khung iframe roi ve nen mac dinh cua trinh duyet la TRANG, nen
+       ket qua la chu xam nhat tren nen trang, khong doc noi. Do duoc tren
+       production: tham so iframe co ca theme=dark lan transparent=true.
+       Bo transparent thi X tu ve nen toi cua no, va doc duoc. */
+    a.setAttribute('data-chrome', 'noheader nofooter noborders');
     a.setAttribute('data-tweet-limit', '20');
     a.setAttribute('data-dnt', 'true');
     a.textContent = 'Posts from @ZecatZcash';
@@ -796,12 +888,12 @@
       img.addEventListener('load', relayout);
       /* Mot hang co the vao D1 truoc khi anh kip len. Go the ra thay vi de
          lai mot khung vo. */
-      img.addEventListener('error', () => { fig.remove(); collect(); });
+      img.addEventListener('error', () => { fig.remove(); paginate(false); });
 
       fig.append(img);
       wall.appendChild(fig);
     }
-    collect();
+    paginate(false);
   }
 
   async function growPosts() {

@@ -336,6 +336,20 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 .tile[hidden]{display:none}
 .gallery-foot{margin-top:12px;font-family:var(--mono);font-size:12px;color:var(--muted)}
 
+/* Thanh chuyen trang cua tuong anh. Khong co JS thi no an va ca tuong hien
+   day du, nen trang van dung khi JS hong. */
+.pager{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:20px}
+.pager[hidden]{display:none}
+.pager button{
+  font-family:var(--mono);font-size:12px;min-width:34px;padding:8px 11px;
+  background:transparent;border:1px solid var(--line-2);color:var(--muted);cursor:pointer;
+  transition:border-color .14s var(--ease),color .14s var(--ease);
+}
+.pager button:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
+.pager button[aria-current="page"]{border-color:var(--gold-3);color:var(--gold);background:var(--panel)}
+.pager button:disabled{opacity:.35;cursor:default}
+.pager .gap{font-family:var(--mono);font-size:12px;color:var(--muted);padding:0 3px}
+
 /* Clip 18 giay: khoi rieng phia tren buc tuong. Truoc day no nam lan trong
    luoi, va vi no la thu duy nhat co thanh chu nen no luon cao hon moi tam
    khac va lam hong hang. */
@@ -370,7 +384,7 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 .tlwin-state.on{color:var(--gold);border-color:var(--gold-3)}
 .tlwin-open{margin-left:auto;color:var(--gold);text-decoration:none;border-bottom:1px solid transparent}
 .tlwin-open:hover{border-bottom-color:var(--gold)}
-.tlwin-feed{max-height:660px;overflow-y:auto;overscroll-behavior:contain;padding:14px;scrollbar-width:thin;scrollbar-color:var(--wood) var(--ink-2)}
+.tlwin-feed{background:var(--ink);max-height:660px;overflow-y:auto;overscroll-behavior:contain;padding:14px;scrollbar-width:thin;scrollbar-color:var(--wood) var(--ink-2)}
 .tlwin-feed::-webkit-scrollbar{width:10px}
 .tlwin-feed::-webkit-scrollbar-track{background:var(--ink-2)}
 .tlwin-feed::-webkit-scrollbar-thumb{background:var(--wood);border:2px solid var(--ink-2)}
