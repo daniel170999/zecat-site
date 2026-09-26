@@ -100,6 +100,12 @@
       <span class="sub"><span id="px-usd">$0.001173</span> <span id="px-chg" class="delta down">-11.45%</span> <span class="muted">24h</span></span>
     </div>
     <div class="chart-tools">
+      <div class="seg" id="chart-range" role="group" aria-label="Chart period">
+        <button type="button" data-view="24h" aria-pressed="false">24H</button>
+        <button type="button" data-view="3d" aria-pressed="true">3D</button>
+        <button type="button" data-view="7d" aria-pressed="false">7D</button>
+        <button type="button" data-view="all" aria-pressed="false">ALL</button>
+      </div>
       <div class="seg" id="tf" role="group" aria-label="Candle size">
         <button type="button" data-tf="15m" aria-pressed="false">15m</button>
         <button type="button" data-tf="1h" aria-pressed="true">1H</button>
@@ -115,8 +121,10 @@
 
   <div class="chart-box">
     <div id="chart-canvas"></div>
-    <p class="chart-msg" id="chart-msg">Loading the chain history.</p>
+    <p class="chart-msg" id="chart-msg">Fetching the latest trades.</p>
   </div>
+
+  <p class="chart-context" id="chart-context">3D view · The gold line holds the last traded close; candles mark hours with trades.</p>
 
   <div class="stats" id="stats">
     <div class="stat" data-field="mcap"><span>Market cap</span><b>774 zec <span class="muted">$1.17m</span></b></div>

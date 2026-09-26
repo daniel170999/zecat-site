@@ -193,6 +193,7 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 .price .sub{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-top:9px;font-family:var(--mono);font-size:14px;color:var(--muted)}
 
 .chart-tools{display:flex;gap:10px;flex-wrap:wrap}
+.chart-tools .seg{flex:0 0 auto}
 .seg{display:flex;border:1px solid var(--line-2)}
 .seg button{
   font:inherit;font-family:var(--mono);font-size:12px;font-weight:500;
@@ -202,6 +203,7 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
 }
 .seg button:last-child{border-right:none}
 .seg button:hover{color:var(--gold)}
+.seg button:focus-visible{outline:2px solid var(--gold);outline-offset:2px;position:relative;z-index:1}
 .seg button[aria-pressed="true"]{background:var(--gold);color:var(--ink)}
 
 .chart-box{position:relative;border:1px solid var(--line-2);background:var(--panel);min-height:340px}
@@ -211,6 +213,7 @@ section{border-top:1px solid var(--line);padding-block:var(--step);scroll-margin
   text-align:center;padding:24px;font-family:var(--mono);font-size:13px;color:var(--muted);
 }
 .chart-msg[hidden]{display:none}
+.chart-context{margin:10px 0 18px;color:var(--muted);font:12px/1.5 var(--mono)}
 
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(152px,1fr));gap:1px;background:var(--line-2);border:1px solid var(--line-2);border-top:none}
 .stat{background:var(--panel);padding:15px 17px;transition:background .12s var(--ease)}
@@ -441,6 +444,7 @@ footer{border-top:1px solid var(--line);padding-block:var(--step) calc(var(--ste
   #chart-canvas{height:320px}
   .chart-head{align-items:stretch}
   .chart-tools{width:100%}
+  .chart-tools .seg{flex:1 1 100%}
   .seg{flex:1}
   .seg button{flex:1;text-align:center;padding:9px 8px}
   section{scroll-margin-top:70px}

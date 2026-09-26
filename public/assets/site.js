@@ -173,6 +173,7 @@
   /* ------------------------------------------------------------- the chart */
 
   const TF = { '15m': 900, '1h': 3600, '4h': 14400, '1d': 86400 };
+  const VIEW = { '24h': 86400, '3d': 3 * 86400, '7d': 7 * 86400 };
 
   const C = {
     gold: '#F0C558', gold3: '#D9A24A', stripe: '#C4761C',
@@ -180,7 +181,7 @@
     muted: '#9C7A3A', textHi: '#FFE9BE',
   };
 
-  let chartState = null;   // { raw, chart, candles, volume, tf, unit }
+  let chartState = null;   // { raw, chart, candles, path, volume, tf, unit, view }
 
   /**
    * shld.fun gives one price per block, not candles. Fold those into OHLC
@@ -226,14 +227,26 @@
     );
     /* A token costs a fraction of a cent, so the axis needs real decimals.
         Too few and every candle collapses onto the same printed value. */
-    s.candles.applyOptions({
-      priceFormat: s.unit === 'usd'
-        ? { type: 'price', precision: 6, minMove: 0.000001 }
-        : { type: 'price', precision: 9, minMove: 0.000000001 },
-    });
+    const priceFormat = s.unit === 'usd'
+      ? { type: 'price', precision: 6, minMove: 0.000001 }
+      : { type: 'price', precision: 9, minMove: 0.000000001 };
+    s.candles.applyOptions({ priceFormat });
+    s.path.applyOptions({ priceFormat });
     s.candles.setData(candles);
+    s.path.setData(candles.map((c) => ({ time: c.time, value: c.close })));
     s.volume.setData(volume);
-    s.chart.timeScale().fitContent();
+    if (s.view === 'all' || !candles.length) {
+      s.chart.timeScale().fitContent();
+    } else {
+      const to = candles.at(-1).time;
+      s.chart.timeScale().setVisibleRange({
+        from: Math.max(candles[0].time, to - VIEW[s.view]), to,
+      });
+    }
+    const context = $('#chart-context');
+    if (context) context.textContent =
+      (s.view === 'all' ? 'Full history' : s.view.toUpperCase() + ' view') +
+      ' · The gold line holds the last traded close; candles mark hours with trades.';
   }
 
   function buildChart(raw) {
@@ -258,9 +271,9 @@
         fontFamily: '"IBM Plex Mono", ui-monospace, monospace',
         fontSize: 11,
       },
-      grid: { vertLines: { color: C.line }, horzLines: { color: C.line } },
-      rightPriceScale: { borderColor: C.line2 },
-      timeScale: { borderColor: C.line2, timeVisible: true, secondsVisible: false },
+      grid: { vertLines: { color: C.line }, horzLines: { color: C.line2 } },
+      rightPriceScale: { borderColor: C.line2, scaleMargins: { top: 0.08, bottom: 0.24 } },
+      timeScale: { borderColor: C.line2, timeVisible: true, secondsVisible: false, rightOffset: 2 },
       crosshair: {
         mode: 0,
         vertLine: { color: C.gold3, width: 1, style: 2, labelBackgroundColor: C.gold },
@@ -275,6 +288,14 @@
       upColor: C.gold, downColor: C.stripe,
       borderUpColor: C.gold, borderDownColor: C.stripe,
       wickUpColor: C.gold, wickDownColor: C.stripe,
+      priceLineVisible: false, lastValueVisible: false,
+    });
+
+    const path = chart.addAreaSeries({
+      lineColor: C.gold, lineWidth: 2,
+      lineType: window.LightweightCharts.LineType.WithSteps,
+      topColor: 'rgba(240, 197, 88, 0.12)',
+      bottomColor: 'rgba(240, 197, 88, 0)',
     });
 
     const volume = chart.addHistogramSeries({
@@ -283,7 +304,7 @@
     });
     chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
 
-    chartState = { raw, chart, candles, volume, tf: '1h', unit: 'zec' };
+    chartState = { raw, chart, candles, path, volume, tf: '1h', unit: 'zec', view: '3d' };
     redraw();
     if (msg) msg.hidden = true;
 
@@ -302,6 +323,7 @@
     };
     wire('#tf', 'tf');
     wire('#unit', 'unit');
+    wire('#chart-range', 'view');
   }
 
   /* Same move as every other number on this page: draw what is already on
@@ -311,15 +333,22 @@
      history plus three other endpoints from shld.fun, which is six seconds or
      worse on a cold cache, and a reader should not sit in front of an empty
      rectangle for six seconds. data/chart.json is the same shape, baked by
-     tools/sync-data.mjs --tape, and it loads from our own origin in one hop. */
+     tools/sync-data.mjs --tape, and it loads from our own origin in one hop.
+     Only show that snapshot first while fresh; an older one is a fallback if
+     the live request fails, not a misleading first impression. */
   async function chart() {
     const msg = $('#chart-msg');
     const usable = (raw) => raw && Array.isArray(raw.points) && raw.points.length > 1;
 
     let drawn = false;
+    let oldSnapshot = null;
     try {
       const baked = await getJSON('data/chart.json');
-      if (usable(baked)) { buildChart(baked); drawn = true; }
+      if (usable(baked)) {
+        const age = Date.now() - Date.parse(baked.takenAt);
+        if (age >= 0 && age < 86400_000) { buildChart(baked); drawn = true; }
+        else oldSnapshot = baked;
+      }
     } catch (_) { /* the live read below is the real answer anyway */ }
 
     try {
@@ -330,6 +359,7 @@
       }
     } catch (_) { /* keep whatever is on screen */ }
 
+    if (!drawn && oldSnapshot) { buildChart(oldSnapshot); drawn = true; }
     if (!drawn && msg) {
       msg.hidden = false;
       msg.textContent = 'The chain history is not reachable right now. The coin page on shld.fun has the live chart.';
